@@ -2,7 +2,7 @@
 
 import { ArrowUpRight, AtSign, Fingerprint, Layers, Megaphone, MessageCircle, PenLine, Quote, RefreshCw, Shuffle } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CandidateCard } from "@/components/CandidateCard";
 import { Composer } from "@/components/Composer";
 import { CritiquePanel } from "@/components/CritiquePanel";
@@ -13,6 +13,7 @@ import {
   type RunRequest,
   type Session,
   type UserTurn,
+  activeProfile,
   activeSession,
   api,
   buildContext,
@@ -21,7 +22,7 @@ import {
   uid,
   useStore,
 } from "@/lib/store";
-import type { AngleOption, Candidate, Critique, GenerateResponse } from "@/lib/types";
+import type { AngleOption, Candidate, Critique, DeAIResult, GenerateResponse } from "@/lib/types";
 
 function titleFrom(text: string, session: Session): string {
   const base = text.trim() || session.references.find((r) => r.status === "ready")?.excerpt || "Untitled draft";
@@ -33,7 +34,7 @@ function titleFrom(text: string, session: Session): string {
 const timestamp = () => Date.now();
 
 function kindFor(mode: RunRequest["mode"]): AssistantTurn["kind"] {
-  return mode === "angles" ? "angles" : mode === "critique" ? "critique" : "drafts";
+  return mode === "angles" ? "angles" : mode === "critique" ? "critique" : mode === "check" ? "check" : "drafts";
 }
 
 export default function WritePage() {
@@ -67,7 +68,7 @@ export default function WritePage() {
       at: now,
       status: "pending",
       kind: kindFor(req.mode),
-      label: req.mode === "critique" ? "Diagnosis" : req.mode === "angles" ? "Angles" : "Drafts",
+      label: req.mode === "critique" ? "Diagnosis" : req.mode === "check" ? "AI writing check" : req.mode === "angles" ? "Angles" : "Drafts",
       source: text,
       request: req,
     };
@@ -91,6 +92,15 @@ export default function WritePage() {
       );
 
     try {
+      if (req.mode === "check") {
+        const check = await api<DeAIResult>("/api/deai", {
+          text,
+          avoid: activeProfile(state)?.avoid ?? [],
+          rejected: state.feedback.filter((f) => f.kind === "never" && f.note).map((f) => f.note!),
+        });
+        finish({ status: "done", check, label: check.flags.length ? `AI writing check · ${check.flags.length} to fix` : "AI writing check · looks human" });
+        return;
+      }
       if (req.mode === "critique") {
         const target = session.references.find((r) => r.role === "target");
         const critique = await api<Critique>("/api/critique", { draft: text, context: target?.text });
@@ -169,6 +179,7 @@ export default function WritePage() {
               onPush={(c, i) => run({ mode: "push", seed: c }, t.source, `Push #${i} further`)}
               onChangeCandidate={(c) => patchTurn(t.id, (x) => ({ ...x, candidates: x.candidates?.map((y) => (y.id === c.id ? c : y)) }))}
               onDismiss={(c) => patchTurn(t.id, (x) => ({ ...x, candidates: x.candidates?.filter((y) => y.id !== c.id) }))}
+              onUseText={(text) => update((s) => patchActive(s, (x) => ({ ...x, draft: text })))}
               onAnswer={(answer) => {
                 update((s) => patchActive(s, (x) => ({ ...x, draft: `${t.source}\n\n${answer}`.trim() })));
                 patchTurn(t.id, (x) => ({ ...x, question: null }));
@@ -261,6 +272,7 @@ function AssistantBlock({
   onChangeCandidate,
   onDismiss,
   onAnswer,
+  onUseText,
 }: {
   turn: AssistantTurn;
   onRetry: () => void;
@@ -272,6 +284,7 @@ function AssistantBlock({
   onChangeCandidate: (c: Candidate) => void;
   onDismiss: (c: Candidate) => void;
   onAnswer: (answer: string) => void;
+  onUseText: (text: string) => void;
 }) {
   const header = (
     <div className="flex items-center gap-3 mb-4">
@@ -282,7 +295,13 @@ function AssistantBlock({
         Moxie
       </span>
       <span className={`text-sm ${turn.status === "pending" ? "text-muted animate-pulse" : "text-muted"}`}>
-        {turn.status === "pending" ? (turn.kind === "critique" ? "Reading your draft…" : "Writing in your voice…") : turn.label}
+        {turn.status === "pending"
+          ? turn.kind === "critique"
+            ? "Reading your draft…"
+            : turn.kind === "check"
+              ? "Checking for AI patterns…"
+              : "Writing in your voice…"
+          : turn.label}
       </span>
     </div>
   );
@@ -292,7 +311,7 @@ function AssistantBlock({
       <section aria-busy="true">
         {header}
         <div className="rounded-2xl border border-line bg-panel divide-y divide-line overflow-hidden">
-          {[0, 1, 2].slice(0, turn.kind === "critique" ? 1 : 3).map((i) => (
+          {[0, 1, 2].slice(0, turn.kind === "critique" || turn.kind === "check" ? 1 : 3).map((i) => (
             <div key={i} className="p-5 space-y-2.5 animate-pulse">
               <div className="h-3 w-1/4 rounded bg-panel-3" />
               <div className="h-3 w-full rounded bg-panel-2" />
@@ -314,6 +333,15 @@ function AssistantBlock({
             Try again
           </button>
         </div>
+      </section>
+    );
+  }
+
+  if (turn.kind === "check" && turn.check) {
+    return (
+      <section>
+        {header}
+        <CheckResult result={turn.check} original={turn.source} onUse={onUseText} />
       </section>
     );
   }
@@ -438,5 +466,57 @@ function QuestionBanner({ question, onAnswer }: { question: string; onAnswer: (a
         </button>
       </div>
     </form>
+  );
+}
+
+function CheckResult({ result, original, onUse }: { result: DeAIResult; original: string; onUse: (text: string) => void }) {
+  const [copied, setCopied] = useState(false);
+  const clean = result.flags.length === 0;
+  return (
+    <div className="rounded-2xl border border-line bg-panel overflow-hidden">
+      {clean ? (
+        <p className="p-5 text-sm">
+          <span className="tag tag-good mr-2">Looks human</span>
+          Nothing generic or machine-sounding found.
+        </p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {result.flags.map((f, i) => (
+            <li key={i} className="p-4 sm:px-5 text-sm space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="tag tag-warn">{f.category}</span>
+                <span className="text-muted line-through decoration-muted/50 truncate">“{f.quote}”</span>
+              </div>
+              <p>
+                <span className="text-muted">Try:</span> {f.suggestion}
+              </p>
+              <p className="text-xs text-faint">{f.why}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!clean && result.rewrite.trim() !== original.trim() && (
+        <div className="border-t border-line p-5 space-y-3 bg-panel-2/40">
+          <span className="label !mb-0">Cleaner version</span>
+          <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{result.rewrite}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={async () => {
+                await navigator.clipboard.writeText(result.rewrite).catch(() => undefined);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+              }}
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+            <button type="button" className="btn btn-sm" onClick={() => onUse(result.rewrite)}>
+              Put in message box
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -7,7 +7,6 @@ import {
   Fingerprint,
   Layers,
   PenLine,
-  Shapes,
   Shuffle,
   Sparkles,
   SquarePen,
@@ -36,6 +35,7 @@ const MODE_ITEMS: { mode: SendMode; title: string; icon: React.ReactNode }[] = [
   { mode: "surprise", title: "Surprise me", icon: <Shuffle size={16} /> },
   { mode: "formats", title: "Explore formats", icon: <Layers size={16} /> },
   { mode: "critique", title: "Find the real thought", icon: <Stethoscope size={16} /> },
+  { mode: "check", title: "Check for AI writing", icon: <WandSparkles size={16} /> },
 ];
 
 function ago(t: number): string {
@@ -135,8 +135,6 @@ export function CommandPalette({ initialQuery, onClose }: { initialQuery: string
     }
     out.push(
       { id: "g:voice", group: "Go to", title: "Voice & taste", hint: "Teach it how you write", icon: <Fingerprint size={16} />, run: () => go("/voice") },
-      { id: "g:structures", group: "Go to", title: "Structures", hint: "Reusable writing mechanics", icon: <Shapes size={16} />, run: () => go("/structures") },
-      { id: "g:deai", group: "Go to", title: "De-AI checker", hint: "Flag generic, machine-sounding writing", icon: <WandSparkles size={16} />, run: () => go("/de-ai") },
       { id: "g:library", group: "Go to", title: "Library", hint: "Saved drafts, posted, learning signals", icon: <Bookmark size={16} />, run: () => go("/library") },
     );
     return out;

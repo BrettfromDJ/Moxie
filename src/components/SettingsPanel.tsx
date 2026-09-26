@@ -2,7 +2,6 @@
 
 import { ANGLES, FORMATS, GOALS, LENGTHS, MODES, RELATIONSHIPS, creativityLabel, DEFAULT_SETTINGS } from "@/lib/options";
 import { activeSession, patchActive, useStore } from "@/lib/store";
-import { BUILT_IN_STRUCTURES } from "@/lib/structures";
 import type { ComposerSettings } from "@/lib/types";
 import { X_LIMIT, X_PREMIUM_LIMIT } from "@/lib/xcount";
 
@@ -52,9 +51,7 @@ function Pills<T extends string | number>({
 }
 
 export function SettingsPanel() {
-  const { state } = useStore();
   const { settings: s, set } = useSettings();
-  const structures = [...BUILT_IN_STRUCTURES, ...state.customStructures];
 
   return (
     <div className="space-y-4 max-h-[min(34rem,45vh)] overflow-y-auto p-4">
@@ -103,17 +100,6 @@ export function SettingsPanel() {
       )}
       <Pills label="Goal" value={s.goal} options={GOALS.map((g) => (g.value === "none" ? { ...g, label: "None" } : g))} onChange={(goal) => set({ goal })} />
       <Pills label="Style" value={s.mode} options={MODES} onChange={(mode) => set({ mode })} />
-      <label className="block">
-        <span className="label">Structure</span>
-        <select className="input text-sm" value={s.structureId ?? ""} onChange={(e) => set({ structureId: e.target.value || null })}>
-          <option value="">Any structure</option>
-          {structures.map((st) => (
-            <option key={st.id} value={st.id}>
-              {st.name} — {st.pattern}
-            </option>
-          ))}
-        </select>
-      </label>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -141,7 +127,6 @@ export function settingsSummary(s: ComposerSettings): string[] {
   if (s.format !== "auto") out.push(label(FORMATS, s.format));
   if (s.length !== "standard") out.push(label(LENGTHS, s.length));
   if (s.angle !== "auto") out.push(s.angle === "custom" ? "Custom angle" : label(ANGLES, s.angle));
-  if (s.structureId) out.push("Structure");
   if (s.creativity !== DEFAULT_SETTINGS.creativity) out.push(creativityLabel(s.creativity));
   if (s.options !== DEFAULT_SETTINGS.options) out.push(`${s.options} options`);
   return out;

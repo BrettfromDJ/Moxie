@@ -42,7 +42,15 @@ export function normalizeContext<T extends GenerationContext>(body: T): T {
     feedback,
     history,
     voice: body.voice ?? null,
-    taste: body.taste ?? null,
+    taste: body.taste
+      ? {
+          ...body.taste,
+          inspirations: (body.taste.inspirations ?? [])
+            .filter((i) => i?.enabled && i.blueprint)
+            .slice(0, 3)
+            .map((i) => ({ ...i, posts: (i.posts ?? []).slice(0, 30) })),
+        }
+      : null,
     structure: body.structure ?? null,
   };
 }

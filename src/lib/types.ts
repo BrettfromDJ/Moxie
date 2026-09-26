@@ -123,9 +123,41 @@ export interface AdmiredPost {
   qualities: string[]; // what the user admires about it
 }
 
+// A writer on X whose style the user wants to learn from.
+export type InspirationStrength = "light" | "blend" | "strong";
+
+export interface InspirationPost {
+  text: string;
+  likes?: number;
+}
+
+export interface InspirationBlueprint {
+  summary: string; // what makes their posts work
+  signatureMoves: string[]; // reusable techniques, described so they can be applied to any topic
+  hooks: string[]; // how they open
+  structures: { name: string; pattern: string; description: string }[];
+  rhythm: string; // sentence length, line breaks, casing, punctuation
+  topics: string[]; // what they write about (context only; never borrowed)
+  avoid: string[]; // things they never do
+}
+
+export interface Inspiration {
+  id: string;
+  handle?: string; // without "@"
+  name: string;
+  avatar?: string;
+  bio?: string;
+  posts: InspirationPost[];
+  blueprint: InspirationBlueprint;
+  strength: InspirationStrength;
+  enabled: boolean;
+  addedAt: number;
+}
+
 export interface TasteProfile {
   admired: AdmiredPost[];
   qualities: string[]; // general things the user considers good writing
+  inspirations?: Inspiration[];
 }
 
 export type FeedbackKind = "more" | "never" | "edit" | "posted";

@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Stethoscope,
+  WandSparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
@@ -33,6 +34,7 @@ export const SEND_MODES: Record<SendMode, { title: string; hint: string; icon: R
   surprise: { title: "Surprise me", hint: "Less obvious takes you probably haven't considered", icon: <Shuffle size={16} /> },
   formats: { title: "Explore formats", hint: "Same idea as a one-liner, short post, long post, and thread", icon: <Layers size={16} /> },
   critique: { title: "Find the real thought", hint: "Diagnose what's weak before polishing, and get one useful question", icon: <Stethoscope size={16} /> },
+  check: { title: "Check for AI writing", hint: "Paste any post to flag what sounds generated and get a cleaner version", icon: <WandSparkles size={16} /> },
 };
 
 const pillBase = "items-center gap-1.5 rounded-full px-2.5 sm:px-3 h-9 text-sm text-muted whitespace-nowrap hover:bg-panel-3 hover:text-fg transition-colors";
@@ -59,11 +61,13 @@ export function Composer({
   const hasReadyRef = session.references.some((r) => r.status === "ready");
   const text = session.draft;
   const mode = state.sendMode;
-  const canSend = !busy && !loadingRefs && (!!text.trim() || hasReadyRef) && (mode !== "critique" || !!text.trim());
+  const canSend = !busy && !loadingRefs && (!!text.trim() || hasReadyRef) && (mode !== "critique" && mode !== "check" || !!text.trim());
   const unknown = unknownTags(text, session.references);
   const summary = settingsSummary(settings);
   const structure = findStructure(settings.structureId, state.customStructures);
   const profile = state.profiles.find((p) => p.id === state.activeProfileId);
+  const inspirations = state.taste.inspirations ?? [];
+  const activeInspirations = inspirations.filter((i) => i.enabled);
   const [source, setSource] = useState("");
 
   const setDraft = (draft: string) => update((s) => patchActive(s, (x) => ({ ...x, draft })));
@@ -198,11 +202,17 @@ export function Composer({
           <Popover
             side={menuSide}
             label="Voice"
-            panelClassName="w-64 p-1.5"
+            panelClassName="w-72 p-1.5"
             trigger={() => (
               <span className={`hidden sm:inline-flex ${pillBase}`}>
                 <Fingerprint size={15} />
                 {profile?.name ?? "No voice"}
+                {activeInspirations.length > 0 && (
+                  <span className="text-faint">
+                    {" "}
+                    + {activeInspirations.length === 1 ? (activeInspirations[0].handle ? `@${activeInspirations[0].handle}` : activeInspirations[0].name) : `${activeInspirations.length} writers`}
+                  </span>
+                )}
               </span>
             )}
           >
@@ -231,8 +241,33 @@ export function Composer({
                     close();
                   }}
                 />
+                {inspirations.length > 0 && (
+                  <>
+                    <div className="my-1 border-t border-line" />
+                    <p className="px-3 pt-1.5 pb-1 text-xs text-faint">Inspired by</p>
+                    {inspirations.map((i) => (
+                      <MenuItem
+                        key={i.id}
+                        title={i.handle ? `@${i.handle}` : i.name}
+                        hint={i.enabled ? { light: "A hint", blend: "Blend", strong: "Strongly" }[i.strength] : "Off"}
+                        active={i.enabled}
+                        icon={i.enabled ? <Check size={16} /> : <span className="inline-block w-4" />}
+                        onClick={() =>
+                          update((s) => ({
+                            ...s,
+                            taste: {
+                              ...s.taste,
+                              inspirations: (s.taste.inspirations ?? []).map((x) => (x.id === i.id ? { ...x, enabled: !x.enabled } : x)),
+                            },
+                          }))
+                        }
+                      />
+                    ))}
+                  </>
+                )}
+                <div className="my-1 border-t border-line" />
                 <Link href="/voice" className="block px-3 py-2 text-sm text-fg hover:bg-panel-3 rounded-xl">
-                  {state.profiles.length ? "Manage voices →" : "Teach it your voice →"}
+                  {state.profiles.length ? "Manage voices & inspirations →" : "Teach it your voice →"}
                 </Link>
               </div>
             )}

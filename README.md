@@ -17,14 +17,14 @@ To try the whole UI without an API key, run `MOXIE_MOCK=1 npm run dev`. Every mo
 ## What's in it
 
 **Write** (`/`): a ChatGPT-style layout with a dark, Fey-inspired look
-- A sidebar lists your past drafts (conversations), grouped by date. It also has **New draft**, **Search** (⌘K), and links to Voice & taste, Structures, De-AI, and Library. It collapses, and on phones it's a slide-out drawer.
+- A sidebar lists your past drafts (conversations), grouped by date. It also has **New draft**, **Search** (⌘K), and links to Voice & taste and Library. It collapses, and on phones it's a slide-out drawer.
 - **⌘K** opens a command menu. Use it to search past drafts, start a new one, change the post type, send mode, or voice, and jump to any page.
 - One big composer asks "What are you thinking about?". Enter sends and Shift+Enter adds a new line. Its toolbar keeps everything else one click away:
   - **+**: add a link, pasted text, or an image as a source.
   - **Post type**: original, quote, reply, announcement, link, image, or remix.
-  - **Settings**: a Midjourney-style panel of pill options for format, length, number of options, creativity, angle, reply relationship, goal, style, structure, and X Premium limits.
-  - **Voice**: pick which voice profile to write in.
-  - **Send mode** (next to the send button): **Find angles** (the default), **Write drafts**, **Surprise me**, **Explore formats**, or **Find the real thought** (a critique of your draft).
+  - **Settings**: a Midjourney-style panel of pill options for format, length, number of options, creativity, angle, reply relationship, goal, style, and X Premium limits.
+  - **Voice**: pick which voice profile to write in, and switch the writers you learn from on or off.
+  - **Send mode** (next to the send button): **Find angles** (the default), **Write drafts**, **Surprise me**, **Explore formats**, **Find the real thought** (a critique of your draft), or **Check for AI writing** (paste any post to get flags and a cleaner version).
 - Results appear as a conversation. Angles show as a numbered table, like a stock screener; click one to get drafts. Button actions ("More like #2", "Push #1 further", "Fresh set", "5 different directions", "Try other formats") show up as small bubbles in the conversation. Follow-up messages keep the earlier context.
 - Each draft card shows the text, one line of facts (X character count, reading time, a voice-match estimate, and any problems), and an icon row: copy, edit, more like this, never like this, push further, and Fit to X. Less common actions sit in a "…" menu: ask for a change, shorten, De-AI, strengthen the hook or opening, improve pacing, save, and "I posted this".
 - Threads display as numbered posts. Hover a post to reorder, shorten, or delete it.
@@ -45,9 +45,13 @@ To try the whole UI without an API key, run `MOXIE_MOCK=1 npm run dev`. Every mo
 - **My taste** is kept separate from **my voice**. Admired posts teach qualities, never wording.
 - A shareable Voice DNA card can be downloaded as a PNG or copied as text. Its stats are measured from your samples.
 
-**Structures** (`/structures`): a library of reusable mechanics ("Setup → expectation → flip", old world vs. new world, compressed insight…). Paste a post you admire to break it into hook / context / turn / payoff, save the structure, and **use it with your idea**.
+**Writers I learn from** (on Voice & taste)
+- Add an X account you admire, by @handle or profile link. Moxie reads their best-performing recent original posts through the X API (about $0.50 per account; needs `X_BEARER_TOKEN`). Without a token, paste their posts instead.
+- It then works out how they write (signature moves, openings, rhythm, recurring shapes, what they never do) and shows you what it learned.
+- Choose how much drafts lean on each writer: **A hint** (your voice with a few of their techniques), **Blend**, or **Strongly** (written the way they would, with your ideas). Toggle writers on or off from the composer's Voice menu.
+- It never copies their words, topics, or stories. Any draft that comes out too close to one of their real posts is rewritten automatically.
 
-**De-AI** (`/de-ai`): a standalone checker, usable without a profile. It gives instant pattern hits plus model-flagged issues, with suggestions and a cleaner rewrite.
+**Structures** are no longer picked by hand. The built-in library, plus the recurring shapes learned from your inspirations, is offered to the model as an optional toolkit, varied across drafts and never forced.
 
 **Library** (`/library`): saved drafts, posted history, and every learning signal. You can delete anything you don't want it to learn from.
 

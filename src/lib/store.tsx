@@ -8,6 +8,7 @@ import type {
   Candidate,
   ComposerSettings,
   Critique,
+  DeAIResult,
   FeedbackKind,
   FeedbackSignal,
   GenerationContext,
@@ -23,7 +24,7 @@ import type {
 // this state with each request.
 
 // What pressing send does.
-export type SendMode = "angles" | "variations" | "surprise" | "formats" | "critique";
+export type SendMode = "angles" | "variations" | "surprise" | "formats" | "critique" | "check";
 
 // Everything needed to re-run an assistant turn (used by Retry).
 export interface RunRequest {
@@ -47,7 +48,7 @@ export interface AssistantTurn {
   role: "assistant";
   at: number;
   status: "pending" | "done" | "error";
-  kind: "angles" | "drafts" | "critique";
+  kind: "angles" | "drafts" | "critique" | "check";
   label: string;
   source: string; // the author message this turn answers
   request: RunRequest;
@@ -56,6 +57,7 @@ export interface AssistantTurn {
   formatNote?: string;
   question?: string | null;
   critique?: Critique;
+  check?: DeAIResult;
   error?: string;
 }
 
@@ -115,7 +117,7 @@ function initial(): AppState {
   return {
     profiles: [],
     activeProfileId: null,
-    taste: { admired: [], qualities: [] },
+    taste: { admired: [], qualities: [], inspirations: [] },
     feedback: [],
     customStructures: [],
     posted: [],
@@ -137,6 +139,7 @@ function load(): AppState {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<AppState>;
       const state: AppState = { ...base, ...parsed, lastSettings: { ...DEFAULT_SETTINGS, ...parsed.lastSettings } };
+      state.taste = { ...base.taste, ...state.taste, inspirations: state.taste?.inspirations ?? [] };
       state.sessions = (state.sessions ?? []).map((s) => ({
         ...s,
         settings: { ...DEFAULT_SETTINGS, ...s.settings },

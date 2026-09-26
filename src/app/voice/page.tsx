@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, Fingerprint, Heart, Plus, Share2, Sparkles } from "lucide-react";
+import { InspirationsSection } from "@/components/Inspirations";
 import { PageHeader, SectionTitle } from "@/components/Shell";
 
 import { useEffect, useState } from "react";
@@ -100,8 +101,8 @@ export default function VoicePage() {
       <div className="max-w-6xl mx-auto px-5 sm:px-10 space-y-12">
       <p className="text-muted text-sm max-w-2xl -mt-1">
         <span className="font-medium text-fg">My voice</span> is learned from your own writing and decides how drafts sound.{" "}
-        <span className="font-medium text-fg">My taste</span> is what you admire in other people&apos;s posts; it shapes
-        hooks and structure without replacing your voice.
+        <span className="font-medium text-fg">Writers you learn from</span> and <span className="font-medium text-fg">your taste</span> shape
+        how drafts are built, at the strength you choose.
       </p>
 
       <section className="space-y-5">
@@ -119,6 +120,8 @@ export default function VoicePage() {
           <p className="text-sm text-muted">Pick a profile above.</p>
         )}
       </section>
+
+      <InspirationsSection />
 
       <TasteSection />
       </div>

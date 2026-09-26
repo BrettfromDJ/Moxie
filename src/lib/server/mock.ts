@@ -156,3 +156,29 @@ export const mockSuggestion = (): z.infer<typeof ProfileSuggestionSchema> => ({
   habitUpdates: [{ field: "lineBreaks", value: "One idea per line, blank line before the close" }],
   notes: "You kept cutting rhetorical openers and adding specific numbers in your edits.",
 });
+
+export const mockBlueprint = () => ({
+  summary: "Leads with one concrete, slightly uncomfortable observation and stops as soon as it lands. No setup, no moral.",
+  signatureMoves: [
+    "Anchor the post in one specific number or moment from their own work",
+    "State the claim in the first line with no warm-up",
+    "Use one short aside in parentheses to sound candid",
+    "End on a concrete detail instead of a lesson",
+  ],
+  hooks: ["A blunt first-person admission", "A surprising number with no context"],
+  structures: [
+    { name: "Admission → detail", pattern: "Admit it → the detail that proves it", description: "Confess something, then back it with one concrete detail." },
+    { name: "Before / after, no moral", pattern: "What I did → what I do now", description: "Show a change of practice and let the reader infer why." },
+  ],
+  rhythm: "Mostly lowercase, 1-3 short lines, periods over commas, never hashtags or emoji.",
+  topics: ["building products", "hiring", "small teams"],
+  avoid: ["Threads", "Motivational wrap-ups", "Questions to the audience"],
+});
+
+export const mockInspirationPosts = () => [
+  { text: "we shipped 11 features last quarter. customers noticed 2 of them.", likes: 4200 },
+  { text: "hired someone who asked more questions in the interview than we did. best hire of the year", likes: 3100 },
+  { text: "our roadmap had 40 items in january. it has 6 now. revenue is up", likes: 2800 },
+  { text: "stopped doing weekly status meetings. nothing broke (one thing got slightly worse)", likes: 1900 },
+  { text: "the best onboarding flow we ever built was a 4 minute loom from the founder", likes: 1500 },
+];

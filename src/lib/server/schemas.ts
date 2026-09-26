@@ -125,3 +125,17 @@ export const ProfileSuggestionSchema = z.object({
   ),
   notes: z.string().describe("A short plain-language explanation of what the feedback shows"),
 });
+
+export const BlueprintSchema = z.object({
+  summary: z.string().describe("Two plain sentences on what makes this writer's posts work"),
+  signatureMoves: z
+    .array(z.string())
+    .describe("4-6 concrete, reusable techniques, each described so it can be applied to any topic (no quotes from their posts)"),
+  hooks: z.array(z.string()).describe("How they typically open, as reusable descriptions"),
+  structures: z
+    .array(z.object({ name: z.string(), pattern: z.string().describe("Arrow notation like 'Moment → detail → plain takeaway'"), description: z.string() }))
+    .describe("2-4 shapes their posts repeatedly take"),
+  rhythm: z.string().describe("Sentence length, line breaks, casing, punctuation, emoji and hashtag habits, with observable evidence"),
+  topics: z.array(z.string()).describe("What they write about"),
+  avoid: z.array(z.string()).describe("Things this writer never does"),
+});

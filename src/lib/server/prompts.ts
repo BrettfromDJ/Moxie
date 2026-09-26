@@ -11,10 +11,12 @@ import {
   creativityInstruction,
 } from "../options";
 import { selectExamples } from "../retrieval";
+import { BUILT_IN_STRUCTURES } from "../structures";
 import type {
   Candidate,
   GenerateRequest,
   GenerationContext,
+  InspirationStrength,
   RefineRequest,
   ResolvedReference,
   VoiceProfile,
@@ -30,6 +32,7 @@ Voice
 - The author's real posts (<voice_examples>) outrank everything else, including the profile description and general writing advice. Match their sentence length, capitalization, punctuation, vocabulary, line breaks, and how they open and end. If they write in lowercase, so do you. If they ramble a bit, you can too.
 - Reuse the author's own phrasing from their message wherever it works. Their words are almost always better than a polished paraphrase.
 - Without examples, write like a smart person texting a friend who knows the field: plain words, concrete nouns, no performance.
+- Inspirations (<inspirations>) are writers the author admires. Learn how they write and apply it at the strength given for each: "light" means the author's voice with a few of the inspiration's techniques; "blend" means the author's ideas and vocabulary shaped by the inspiration's rhythm, openings, and moves; "strong" means write it the way the inspiration would, while the ideas, facts, opinions, and experiences stay the author's. At every strength, never reuse an inspiration's sentences, catchphrases, topics, or anecdotes, and never make a post read as an imitation of a specific person.
 
 Substance
 - Build every draft from something concrete the author gave you: a detail, a number, an experience, a source. If the material is thin, write something shorter and more modest rather than inflating it with generalities, and use the question field to ask for the missing detail.
@@ -148,6 +151,50 @@ function tasteBlock(ctx: GenerationContext): string {
   return `<taste note="What the author admires in OTHER people's writing. Borrow qualities, not wording or voice.">\n${parts.join("\n")}\n</taste>`;
 }
 
+const STRENGTH_NOTE: Record<InspirationStrength, string> = {
+  light: "Keep the author's voice; borrow one or two of these techniques where they fit.",
+  blend: "Shape the author's ideas with this writer's rhythm, openings, and signature moves.",
+  strong: "Write it the way this writer would, but with the author's ideas, facts, and opinions.",
+};
+
+function inspirationsBlock(ctx: GenerationContext, query: string): string {
+  const list = (ctx.taste?.inspirations ?? []).filter((i) => i.enabled).slice(0, 3);
+  if (!list.length) return "";
+  const parts = list.map((i) => {
+    const b = i.blueprint;
+    const posts = selectExamples(
+      i.posts.map((p, n) => ({ id: String(n), text: p.text, source: "pasted" as const })),
+      query,
+      ctx.settings.postType,
+      i.strength === "strong" ? 6 : 4,
+    );
+    return `<inspiration name="${attr(i.name)}"${i.handle ? ` handle="@${attr(i.handle)}"` : ""} strength="${i.strength}">
+Apply at this strength: ${STRENGTH_NOTE[i.strength]}
+What makes them work: ${b.summary}
+Signature moves:\n${b.signatureMoves.map((m) => `  * ${m}`).join("\n")}
+Openings: ${b.hooks.join("; ")}
+Rhythm: ${b.rhythm}
+Shapes they use: ${b.structures.map((st) => `${st.name} (${st.pattern})`).join("; ")}
+They never: ${b.avoid.join("; ")}
+Their topics (do not borrow): ${b.topics.join(", ")}
+<their_posts note="For studying rhythm and moves only. Never reuse their wording, topics, or stories.">
+${posts.map((p) => `<post>${esc(p.text)}</post>`).join("\n")}
+</their_posts>
+</inspiration>`;
+  });
+  return `<inspirations note="Writers the author admires and wants to learn from.">\n${parts.join("\n")}\n</inspirations>`;
+}
+
+// The structure library isn't picked by the user; it's offered as a loose toolkit.
+function toolkitBlock(ctx: GenerationContext): string {
+  if (ctx.structure) return "";
+  const fromInspirations = (ctx.taste?.inspirations ?? [])
+    .filter((i) => i.enabled)
+    .flatMap((i) => i.blueprint.structures.map((st) => `${st.name} (${st.pattern}): ${st.description}`));
+  const lines = [...BUILT_IN_STRUCTURES.map((st) => `${st.name} (${st.pattern}): ${st.description}`), ...fromInspirations];
+  return `<toolkit note="Shapes a post can take. Optional: use one only when it genuinely fits the material, vary them across candidates, and never force a formula.">\n${lines.map((l) => `- ${l}`).join("\n")}\n</toolkit>`;
+}
+
 function feedbackBlock(ctx: GenerationContext): string {
   const f = ctx.feedback.slice(-14);
   if (!f.length) return "";
@@ -238,7 +285,9 @@ function sharedContext(ctx: GenerationContext): { blocks: Block[]; text: string 
   const text = [
     settingsBlock(ctx),
     voiceBlock(ctx.voice, query, ctx.settings.postType),
+    inspirationsBlock(ctx, query),
     tasteBlock(ctx),
+    toolkitBlock(ctx),
     feedbackBlock(ctx),
     refs.text,
     authorBlock(ctx),

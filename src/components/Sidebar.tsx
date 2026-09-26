@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, Fingerprint, Menu, PanelLeft, Search, Shapes, SquarePen, Trash2, WandSparkles } from "lucide-react";
+import { Bookmark, Fingerprint, Menu, PanelLeft, Search, SquarePen, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,8 +9,6 @@ import { Logo } from "./Logo";
 
 const TOOLS = [
   { href: "/voice", label: "Voice & taste", icon: Fingerprint },
-  { href: "/structures", label: "Structures", icon: Shapes },
-  { href: "/de-ai", label: "De-AI checker", icon: WandSparkles },
   { href: "/library", label: "Library", icon: Bookmark },
 ];
 

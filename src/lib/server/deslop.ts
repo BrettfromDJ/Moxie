@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { findSlop, mentions } from "../checks";
+import { mostSimilar } from "../retrieval";
 import type { Candidate, CardRole, GenerationContext } from "../types";
 import { structured } from "./claude";
 import { WRITER_SYSTEM, voiceBlock } from "./prompts";
@@ -30,6 +31,11 @@ function problemsFor(c: Candidate, ctx: GenerationContext): string[] {
   const out = findSlop(text, ctx.voice).map((h) => `${h.category}: “${h.quote}”`);
   for (const a of ctx.voice?.avoid ?? []) if (mentions(text, a)) out.push(`On the author's avoid list: “${a}”`);
   for (const f of ctx.feedback) if (f.kind === "never" && f.note && mentions(text, f.note)) out.push(`The author rejected this before: “${f.note}”`);
+  // Learning from an inspiration must never turn into copying them.
+  for (const i of ctx.taste?.inspirations ?? []) {
+    const m = mostSimilar(text, i.posts.map((p) => p.text));
+    if (m && m.score >= 0.2) out.push(`Too close to a real post by ${i.handle ? `@${i.handle}` : i.name}: “${m.text.slice(0, 120)}”. Keep the technique, change the words.`);
+  }
   return out;
 }
 
