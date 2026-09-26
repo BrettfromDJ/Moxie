@@ -16,12 +16,12 @@ export function CritiquePanel({
 }: {
   critique: Critique;
   onAnswer: (answer: string) => void;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   const [answer, setAnswer] = useState("");
   const v = VERDICT[critique.verdict];
   return (
-    <section className="card p-4 space-y-3 text-sm" aria-label="Draft diagnosis">
+    <section className="rounded-2xl border border-line bg-panel p-5 space-y-3 text-sm" aria-label="Draft diagnosis">
       <div className="flex items-start gap-2">
         <div>
           <p className={`font-semibold ${v.cls}`}>{v.label}</p>
@@ -29,9 +29,11 @@ export function CritiquePanel({
             <span className="font-medium text-fg">What you seem to mean:</span> {critique.coreThought}
           </p>
         </div>
-        <button className="btn btn-ghost btn-sm ml-auto" onClick={onClose} type="button" aria-label="Close diagnosis">
-          ✕
-        </button>
+        {onClose && (
+          <button className="btn btn-ghost btn-sm ml-auto" onClick={onClose} type="button" aria-label="Close diagnosis">
+            ✕
+          </button>
+        )}
       </div>
       {critique.issues.length > 0 && (
         <ul className="space-y-2">
@@ -58,11 +60,11 @@ export function CritiquePanel({
             rows={2}
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Answer in your own words; it gets added to your thought."
+            placeholder="Answer in your own words; it gets added to your message."
             aria-label="Answer the question"
           />
           <button className="btn btn-primary btn-sm" type="submit" disabled={!answer.trim()}>
-            Add to my thought
+            Add to message
           </button>
         </form>
       )}

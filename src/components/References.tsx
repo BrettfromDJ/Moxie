@@ -1,22 +1,16 @@
 "use client";
 
+import { FileText, Image as ImageIcon, Link as LinkIcon, LoaderCircle, CircleAlert, X } from "lucide-react";
 import { useState } from "react";
-import { api, uid, useStore } from "@/lib/store";
+import { activeSession, api, patchActive, uid, useStore } from "@/lib/store";
 import type { PostType, RefKind, RefRole, Reference } from "@/lib/types";
+import { Popover } from "./Popover";
 
-const ROLE_LABEL: Record<RefRole, string> = {
-  target: "Target (responding to)",
-  facts: "Facts (use its info)",
-  style: "Style example only",
-  context: "Background context",
-};
-
-const KIND_LABEL: Record<RefKind, string> = {
-  "x-post": "Post on X",
-  article: "Article",
-  page: "Web page",
-  text: "Pasted text",
-  image: "Image",
+const ROLE_LABEL: Record<RefRole, { title: string; hint: string }> = {
+  target: { title: "Responding to this", hint: "The post you're replying to, quoting, or remixing" },
+  facts: { title: "Use its facts", hint: "Pull information from it" },
+  style: { title: "Style example only", hint: "Emulate a quality, never its content" },
+  context: { title: "Background", hint: "Context for the writer" },
 };
 
 interface Extracted {
@@ -36,71 +30,64 @@ function nextTag(refs: Reference[], base: string): string {
 
 function defaultRole(kind: RefKind, refs: Reference[], postType: PostType): RefRole {
   const hasTarget = refs.some((r) => r.role === "target");
-  if (kind === "x-post" && !hasTarget && ["quote", "reply", "remix"].includes(postType)) return "target";
+  if ((kind === "x-post" || kind === "text") && !hasTarget && ["quote", "reply", "remix"].includes(postType)) return "target";
   if (kind === "article" || kind === "page") return "facts";
   return "context";
 }
 
-// Shared actions for creating references, used by the composer and the panel.
+// Actions for adding references to the active conversation.
 export function useReferenceActions() {
   const { state, update } = useStore();
 
   const patch = (id: string, p: Partial<Reference>) =>
-    update((s) => ({
-      ...s,
-      composer: {
-        ...s.composer,
-        references: s.composer.references.map((r) => (r.id === id ? { ...r, ...p } : r)),
-      },
-    }));
+    update((s) => patchActive(s, (x) => ({ ...x, references: x.references.map((r) => (r.id === id ? { ...r, ...p } : r)) })));
+
+  const add = (ref: Reference) => update((s) => patchActive(s, (x) => ({ ...x, references: [...x.references, ref] })));
 
   function addUrl(url: string): string {
-    const refs = state.composer.references;
-    const tag = nextTag(refs, "link");
+    const session = activeSession(state);
+    const tag = nextTag(session.references, "link");
     const id = uid("ref");
-    const ref: Reference = { id, tag, kind: "page", role: "context", status: "loading", url };
-    update((s) => ({ ...s, composer: { ...s.composer, references: [...s.composer.references, ref] } }));
+    add({ id, tag, kind: "page", role: "context", status: "loading", url });
     api<Extracted>("/api/references/fetch", { url })
       .then((x) =>
-        update((s) => {
-          const others = s.composer.references.filter((r) => r.id !== id);
-          const role = defaultRole(x.kind, others, s.composer.settings.postType);
-          let references = s.composer.references.map((r) =>
-            r.id === id
-              ? { ...r, status: "ready" as const, kind: x.kind, role, url: x.url, author: x.author, title: x.title, text: x.text, excerpt: x.excerpt }
-              : r,
-          );
-          // Keep a known parent-post relationship explicit: add the parent as its own reference.
-          if (x.parent && !references.some((r) => r.url === x.parent!.url)) {
-            const ptag = nextTag(references, "parent");
-            references = [
-              ...references,
-              { id: uid("ref"), tag: ptag, kind: "x-post", role: "context", status: "ready", url: x.parent.url, author: x.parent.author, text: x.parent.text, excerpt: x.parent.text.slice(0, 220) },
-            ];
-            references = references.map((r) => (r.id === id ? { ...r, parentTag: ptag } : r));
-          }
-          return { ...s, composer: { ...s.composer, references } };
-        }),
+        update((s) =>
+          patchActive(s, (sess) => {
+            const others = sess.references.filter((r) => r.id !== id);
+            const role = defaultRole(x.kind, others, sess.settings.postType);
+            let references = sess.references.map((r) =>
+              r.id === id
+                ? { ...r, status: "ready" as const, kind: x.kind, role, url: x.url, author: x.author, title: x.title, text: x.text, excerpt: x.excerpt }
+                : r,
+            );
+            // Keep a known parent-post relationship explicit: add the parent as its own reference.
+            if (x.parent && !references.some((r) => r.url === x.parent!.url)) {
+              const ptag = nextTag(references, "parent");
+              references = [
+                ...references.map((r) => (r.id === id ? { ...r, parentTag: ptag } : r)),
+                { id: uid("ref"), tag: ptag, kind: "x-post" as const, role: "context" as const, status: "ready" as const, url: x.parent.url, author: x.parent.author, text: x.parent.text, excerpt: x.parent.text.slice(0, 220) },
+              ];
+            }
+            return { ...sess, references };
+          }),
+        ),
       )
       .catch((e: Error) => patch(id, { status: "failed", error: e.message }));
     return tag;
   }
 
-  function addText(text = "", author?: string): string {
-    const refs = state.composer.references;
-    const tag = nextTag(refs, "text");
-    const ref: Reference = {
+  function addText(text: string, role?: RefRole): string {
+    const session = activeSession(state);
+    const tag = nextTag(session.references, "text");
+    add({
       id: uid("ref"),
       tag,
       kind: "text",
-      role: defaultRole("x-post", refs, state.composer.settings.postType) === "target" ? "target" : "context",
-      status: text ? "ready" : "failed",
+      role: role ?? defaultRole("text", session.references, session.settings.postType),
+      status: "ready",
       text,
-      author,
       excerpt: text.slice(0, 220),
-      error: text ? undefined : "Paste the text below.",
-    };
-    update((s) => ({ ...s, composer: { ...s.composer, references: [...s.composer.references, ref] } }));
+    });
     return tag;
   }
 
@@ -110,9 +97,8 @@ export function useReferenceActions() {
       return null;
     }
     const dataUrl = await downscale(file);
-    const refs = state.composer.references;
-    const tag = nextTag(refs, "image");
-    const ref: Reference = {
+    const tag = nextTag(activeSession(state).references, "image");
+    add({
       id: uid("ref"),
       tag,
       kind: "image",
@@ -120,8 +106,7 @@ export function useReferenceActions() {
       status: "ready",
       title: file.name,
       image: { dataUrl, mediaType: dataUrl.slice(5, dataUrl.indexOf(";")) },
-    };
-    update((s) => ({ ...s, composer: { ...s.composer, references: [...s.composer.references, ref] } }));
+    });
     return tag;
   }
 
@@ -139,196 +124,158 @@ async function downscale(file: File, max = 1400): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.85);
 }
 
-export function ReferencesPanel({ onInsertTag }: { onInsertTag: (tag: string) => void }) {
-  const { state, update } = useStore();
-  const { addUrl, addText, addImage, patch } = useReferenceActions();
-  const [url, setUrl] = useState("");
-  const refs = state.composer.references;
+const KIND_ICON: Record<RefKind, React.ReactNode> = {
+  "x-post": <span className="font-bold text-[11px] leading-none">𝕏</span>,
+  article: <FileText size={13} />,
+  page: <LinkIcon size={13} />,
+  text: <FileText size={13} />,
+  image: <ImageIcon size={13} />,
+};
 
-  function rename(r: Reference, raw: string) {
+// A compact chip for one reference. Clicking opens its details: rename, role,
+// "replies to", paste-text fallback, and remove.
+export function RefChip({ reference: r }: { reference: Reference }) {
+  const { state, update } = useStore();
+  const { patch } = useReferenceActions();
+  const refs = activeSession(state).references;
+  const [paste, setPaste] = useState("");
+
+  function rename(raw: string) {
     const tag = raw.replace(/^@/, "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 24);
     if (!tag || tag === r.tag) return;
     if (refs.some((x) => x.id !== r.id && x.tag.toLowerCase() === tag.toLowerCase())) {
       alert(`@${tag} is already used.`);
       return;
     }
-    // Renaming a tag updates every place it is used, so references never go stale.
+    // Renaming updates every place the tag is used, so references never go stale.
     const re = new RegExp(`@${r.tag}(?![A-Za-z0-9_-])`, "g");
-    update((s) => ({
-      ...s,
-      composer: {
-        ...s.composer,
-        thought: s.composer.thought.replace(re, `@${tag}`),
-        take: s.composer.take.replace(re, `@${tag}`),
-        references: s.composer.references.map((x) =>
-          x.id === r.id ? { ...x, tag } : x.parentTag === r.tag ? { ...x, parentTag: tag } : x,
-        ),
-      },
-    }));
+    update((s) =>
+      patchActive(s, (x) => ({
+        ...x,
+        draft: x.draft.replace(re, `@${tag}`),
+        references: x.references.map((y) => (y.id === r.id ? { ...y, tag } : y.parentTag === r.tag ? { ...y, parentTag: tag } : y)),
+      })),
+    );
   }
 
-  function remove(r: Reference) {
-    update((s) => ({
-      ...s,
-      composer: {
-        ...s.composer,
-        references: s.composer.references
-          .filter((x) => x.id !== r.id)
-          .map((x) => (x.parentTag === r.tag ? { ...x, parentTag: undefined } : x)),
-      },
-    }));
+  function remove() {
+    update((s) =>
+      patchActive(s, (x) => ({
+        ...x,
+        references: x.references.filter((y) => y.id !== r.id).map((y) => (y.parentTag === r.tag ? { ...y, parentTag: undefined } : y)),
+      })),
+    );
   }
+
+  const subtitle = r.status === "loading" ? "Reading…" : r.status === "failed" ? "Couldn't read" : (r.author ?? r.title ?? r.excerpt ?? "");
 
   return (
-    <section aria-label="References" className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="label !mb-0">References</span>
-        <span className="text-xs text-muted">Type @ in your thought to point at one</span>
-      </div>
-      <form
-        className="flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const u = url.trim();
-          if (!/^https?:\/\//.test(u)) return;
-          onInsertTag(addUrl(u));
-          setUrl("");
-        }}
-      >
-        <input
-          className="input"
-          placeholder="Paste a link (post on X, article, page)…"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          aria-label="Reference URL"
-        />
-        <button className="btn" type="submit" disabled={!/^https?:\/\//.test(url.trim())}>
-          Add
-        </button>
-      </form>
-      <div className="flex gap-2 flex-wrap">
-        <button className="btn btn-sm" type="button" onClick={() => onInsertTag(addText())}>
-          + Paste text
-        </button>
-        <label className="btn btn-sm cursor-pointer">
-          + Image / screenshot
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp"
-            className="hidden"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (f) {
-                const tag = await addImage(f);
-                if (tag) onInsertTag(tag);
-              }
-            }}
-          />
-        </label>
-      </div>
-
-      {refs.map((r) => (
-        <article key={r.id} className="card p-3 space-y-2 text-sm">
+    <Popover
+      label={`Reference @${r.tag}`}
+      side="top"
+      panelClassName="w-80 p-3 space-y-3"
+      trigger={() => (
+        <span
+          className={`inline-flex items-center gap-1.5 max-w-[16rem] rounded-xl border px-2.5 py-1.5 text-xs cursor-pointer hover:bg-panel-2 ${
+            r.status === "failed" ? "border-warn/50" : "border-line"
+          } ${r.role === "target" ? "bg-accent-soft/60" : "bg-panel"}`}
+          data-testid="ref-chip"
+        >
+          <span className="text-muted">
+            {r.status === "loading" ? <LoaderCircle size={13} className="animate-spin" /> : r.status === "failed" ? <CircleAlert size={13} className="text-warn" /> : KIND_ICON[r.kind]}
+          </span>
+          <span className="font-medium text-chip-fg">@{r.tag}</span>
+          {subtitle && <span className="text-muted truncate">{subtitle}</span>}
+        </span>
+      )}
+    >
+      {(close) => (
+        <div className="space-y-3 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-chip-fg bg-chip rounded px-1.5 font-medium">@</span>
+            <span className="text-muted">@</span>
             <input
               aria-label="Reference tag"
-              className="font-medium bg-transparent outline-none border-b border-transparent focus:border-accent w-28"
+              className="input !py-1 font-medium"
               defaultValue={r.tag}
               key={r.tag}
-              onBlur={(e) => rename(r, e.target.value)}
+              onBlur={(e) => rename(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
             />
-            <span className="text-xs text-muted">{KIND_LABEL[r.kind]}</span>
-            <button className="ml-auto btn btn-ghost btn-sm" type="button" onClick={() => remove(r)} aria-label={`Remove @${r.tag}`}>
-              ✕
+            <button type="button" className="btn btn-ghost btn-sm" onClick={close} aria-label="Close">
+              <X size={14} />
             </button>
           </div>
 
-          {r.status === "loading" && <p className="text-muted animate-pulse">Reading {r.url}…</p>}
-
-          {r.status === "ready" && (
-            <div className="space-y-1">
-              {r.image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={r.image.dataUrl} alt={r.title ?? "Reference image"} className="rounded-md max-h-40 border border-line" />
-              )}
-              {(r.author || r.title) && (
-                <p className="font-medium leading-snug">
-                  {r.title}
-                  {r.title && r.author ? " · " : ""}
-                  <span className="text-muted font-normal">{r.author}</span>
-                </p>
-              )}
-              {r.kind === "text" ? (
-                <textarea
-                  className="input text-sm"
-                  rows={3}
-                  value={r.text ?? ""}
-                  onChange={(e) => patch(r.id, { text: e.target.value, excerpt: e.target.value.slice(0, 220) })}
-                  aria-label={`Text for @${r.tag}`}
-                />
-              ) : (
-                r.excerpt && <p className="text-muted line-clamp-3 whitespace-pre-line">{r.excerpt}</p>
-              )}
-              {r.url && (
-                <a href={r.url} target="_blank" rel="noreferrer" className="text-xs text-accent truncate block">
-                  {r.url}
-                </a>
-              )}
-            </div>
+          {r.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={r.image.dataUrl} alt={r.title ?? "Reference image"} className="rounded-lg max-h-36 border border-line" />
           )}
-
+          {r.status === "ready" && r.text && (
+            <p className="text-muted text-xs max-h-28 overflow-y-auto whitespace-pre-line">{r.text.slice(0, 600)}</p>
+          )}
+          {r.url && (
+            <a href={r.url} target="_blank" rel="noreferrer" className="text-xs text-accent truncate block">
+              {r.url}
+            </a>
+          )}
           {r.status === "failed" && (
-            <div className="space-y-1">
-              {r.error && <p className="text-xs text-warn">{r.error}</p>}
+            <div className="space-y-2">
+              <p className="text-xs text-warn">{r.error}</p>
               <textarea
                 className="input text-sm"
                 rows={3}
-                placeholder="Paste the text of this source here…"
+                placeholder="Paste its text here instead…"
+                value={paste}
+                onChange={(e) => setPaste(e.target.value)}
                 aria-label={`Paste text for @${r.tag}`}
-                onBlur={(e) => {
-                  const text = e.target.value.trim();
-                  if (text) patch(r.id, { status: "ready", text, excerpt: text.slice(0, 220), error: undefined, kind: r.kind === "page" ? "text" : r.kind });
-                }}
               />
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={!paste.trim()}
+                onClick={() => patch(r.id, { status: "ready", text: paste.trim(), excerpt: paste.trim().slice(0, 220), error: undefined, kind: "text" })}
+              >
+                Use this text
+              </button>
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2 items-center">
-            <select
-              aria-label={`Role of @${r.tag}`}
-              className="input !w-auto !py-1 text-xs"
-              value={r.role}
-              onChange={(e) => patch(r.id, { role: e.target.value as RefRole })}
-            >
-              {(Object.keys(ROLE_LABEL) as RefRole[]).map((k) => (
-                <option key={k} value={k}>
-                  {ROLE_LABEL[k]}
-                </option>
-              ))}
-            </select>
-            {(r.kind === "x-post" || r.kind === "text") && refs.length > 1 && (
-              <select
-                aria-label={`@${r.tag} replies to`}
-                className="input !w-auto !py-1 text-xs"
-                value={r.parentTag ?? ""}
-                onChange={(e) => patch(r.id, { parentTag: e.target.value || undefined })}
-              >
-                <option value="">Not a reply</option>
-                {refs
-                  .filter((x) => x.id !== r.id)
-                  .map((x) => (
-                    <option key={x.id} value={x.tag}>
-                      Replies to @{x.tag}
-                    </option>
-                  ))}
-              </select>
-            )}
+          <div className="space-y-1">
+            <span className="label">How to use it</span>
+            {(Object.keys(ROLE_LABEL) as RefRole[]).map((k) => (
+              <label key={k} className="flex items-start gap-2 cursor-pointer rounded-lg px-2 py-1 hover:bg-panel-2">
+                <input type="radio" name={`role-${r.id}`} checked={r.role === k} onChange={() => patch(r.id, { role: k })} className="mt-1 accent-[var(--accent)]" />
+                <span>
+                  <span className="block text-sm">{ROLE_LABEL[k].title}</span>
+                  <span className="block text-xs text-muted">{ROLE_LABEL[k].hint}</span>
+                </span>
+              </label>
+            ))}
           </div>
-        </article>
-      ))}
-    </section>
+
+          {(r.kind === "x-post" || r.kind === "text") && refs.length > 1 && (
+            <select
+              aria-label={`@${r.tag} replies to`}
+              className="input text-xs"
+              value={r.parentTag ?? ""}
+              onChange={(e) => patch(r.id, { parentTag: e.target.value || undefined })}
+            >
+              <option value="">Not a reply to another source</option>
+              {refs
+                .filter((x) => x.id !== r.id)
+                .map((x) => (
+                  <option key={x.id} value={x.tag}>
+                    Replies to @{x.tag}
+                  </option>
+                ))}
+            </select>
+          )}
+
+          <button type="button" className="btn btn-sm !text-bad w-full justify-center" onClick={remove}>
+            Remove @{r.tag}
+          </button>
+        </div>
+      )}
+    </Popover>
   );
 }

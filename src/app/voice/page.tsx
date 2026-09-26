@@ -64,7 +64,7 @@ export default function VoicePage() {
   if (!hydrated) return null;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 max-w-6xl mx-auto px-4 sm:px-8 py-8">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Voice & taste</h1>
         <p className="text-muted text-sm max-w-2xl">

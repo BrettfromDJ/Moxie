@@ -178,6 +178,13 @@ function referenceBlocks(refs: ResolvedReference[]): { blocks: Block[]; text: st
 
 function authorBlock(ctx: GenerationContext): string {
   const parts: string[] = [];
+  if (ctx.history?.length) {
+    parts.push(
+      `<earlier_in_conversation note="What the author said earlier in this session, oldest first. Use it as context; the latest message below takes priority.">\n${ctx.history
+        .map((h) => `<message>${esc(h)}</message>`)
+        .join("\n")}\n</earlier_in_conversation>`,
+    );
+  }
   if (ctx.thought.trim()) {
     parts.push(
       `<author_thought note="The author's own idea, draft, or instructions. @tags point at references.">\n${esc(ctx.thought.trim())}\n</author_thought>`,

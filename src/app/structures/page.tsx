@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { api, uid, useStore } from "@/lib/store";
+import { activeSession, api, patchActive, startSession, uid, useStore } from "@/lib/store";
 import { BUILT_IN_STRUCTURES } from "@/lib/structures";
 import type { Structure, StructureAnalysis } from "@/lib/types";
 
@@ -16,10 +16,11 @@ export default function StructuresPage() {
   const [savedId, setSavedId] = useState<string | null>(null);
 
   function use(structure: Structure) {
-    update((s) => ({
-      ...s,
-      composer: { ...s.composer, settings: { ...s.composer.settings, structureId: structure.id } },
-    }));
+    // Applies to the conversation you're in; starts a new one if that already has drafts.
+    update((s) => {
+      const base = activeSession(s).turns.length ? startSession(s) : s;
+      return patchActive(base, (x) => ({ ...x, settings: { ...x.settings, structureId: structure.id } }));
+    });
     router.push("/");
   }
 
@@ -57,7 +58,7 @@ export default function StructuresPage() {
   const all = [...BUILT_IN_STRUCTURES, ...state.customStructures];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto px-4 sm:px-8 py-8">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Writing structures</h1>
         <p className="text-sm text-muted max-w-2xl">

@@ -1,408 +1,421 @@
 "use client";
 
+import { AtSign, Fingerprint, Layers, Megaphone, MessageCircle, PenLine, Quote, RefreshCw, Shuffle, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { CandidateCard } from "@/components/CandidateCard";
-import { Controls } from "@/components/Controls";
+import { Composer, SEND_MODES } from "@/components/Composer";
 import { CritiquePanel } from "@/components/CritiquePanel";
-import { ReferencesPanel, useReferenceActions } from "@/components/References";
-import { TagTextarea, unknownTags } from "@/components/TagTextarea";
-import { EMPTY_COMPOSER, api, buildContext, type Round, uid, useStore } from "@/lib/store";
-import { findStructure } from "@/lib/structures";
-import type {
-  AngleOption,
-  Candidate,
-  Critique,
-  GenerateMode,
-  GenerateResponse,
-} from "@/lib/types";
+import { useSettings } from "@/components/SettingsPanel";
+import {
+  type AssistantTurn,
+  type RunRequest,
+  type Session,
+  type UserTurn,
+  activeSession,
+  api,
+  buildContext,
+  patchActive,
+  patchSession,
+  uid,
+  useStore,
+} from "@/lib/store";
+import type { AngleOption, Candidate, Critique, GenerateResponse } from "@/lib/types";
 
-const ROUND_LABEL: Record<GenerateMode, string> = {
-  angles: "Angles",
-  variations: "Drafts",
-  surprise: "Surprise me",
-  directions: "Completely different directions",
-  formats: "Same idea, four formats",
-  "more-like": "More like this",
-  push: "Pushed further",
-};
+function titleFrom(text: string, session: Session): string {
+  const base = text.trim() || session.references.find((r) => r.status === "ready")?.excerpt || "Untitled draft";
+  const clean = base.replace(/\s+/g, " ");
+  return clean.length > 48 ? `${clean.slice(0, 46)}…` : clean;
+}
 
-function makeRound(label: string, res: GenerateResponse): Round {
-  return {
-    id: uid("r"),
-    label,
-    at: Date.now(),
-    angles: res.angles,
-    candidates: res.candidates ?? [],
-    formatNote: res.formatNote,
-    question: res.question,
-  };
+// Event handlers only; kept out of render so the purity lint rule is satisfied.
+const timestamp = () => Date.now();
+
+function kindFor(mode: RunRequest["mode"]): AssistantTurn["kind"] {
+  return mode === "angles" ? "angles" : mode === "critique" ? "critique" : "drafts";
 }
 
 export default function WritePage() {
   const { state, update, hydrated } = useStore();
-  const { addUrl, addText } = useReferenceActions();
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [critique, setCritique] = useState<Critique | null>(null);
-  const [showSettings, setShowSettings] = useState(true);
-  const [source, setSource] = useState("");
+  const session = activeSession(state);
+  const empty = session.turns.length === 0;
+  const busy = session.turns.some((t) => t.role === "assistant" && t.status === "pending");
+  const endRef = useRef<HTMLDivElement>(null);
 
-  const c = state.composer;
-  const s = c.settings;
-  const responding = s.postType === "quote" || s.postType === "reply";
-  const hasTarget = c.references.some((r) => r.role === "target");
-  const unknown = unknownTags(`${c.thought} ${c.take}`, c.references);
-  const structure = findStructure(s.structureId, state.customStructures);
-  const hasInput = !!(c.thought.trim() || c.take.trim() || c.references.some((r) => r.status === "ready"));
-  const loadingRefs = c.references.some((r) => r.status === "loading");
+  useEffect(() => {
+    if (!empty) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [session.turns.length, empty]);
 
-  const setComposer = (p: Partial<typeof c>) => update((st) => ({ ...st, composer: { ...st.composer, ...p } }));
+  async function run(req: RunRequest, text: string, action?: string, fromComposer = false) {
+    const sid = session.id;
+    const ctx = buildContext(state, session, text);
+    if (req.options) ctx.settings = { ...ctx.settings, options: req.options };
+    const now = timestamp();
+    const userTurn: UserTurn = {
+      id: uid("u"),
+      role: "user",
+      at: now,
+      text,
+      action,
+      tags: session.references.filter((r) => r.status === "ready").map((r) => r.tag),
+    };
+    const turnId = uid("a");
+    const pending: AssistantTurn = {
+      id: turnId,
+      role: "assistant",
+      at: now,
+      status: "pending",
+      kind: kindFor(req.mode),
+      label: req.mode === "critique" ? "Diagnosis" : req.mode === "angles" ? "Angles" : "Drafts",
+      source: text,
+      request: req,
+    };
+    update((s) =>
+      patchSession(s, sid, (x) => ({
+        ...x,
+        title: x.turns.length ? x.title : titleFrom(text, x),
+        draft: fromComposer ? "" : x.draft,
+        updatedAt: now,
+        turns: [...x.turns, userTurn, pending],
+      })),
+    );
 
-  const appendTag = (field: "thought" | "take") => (tag: string) =>
-    update((st) => {
-      const cur = st.composer[field];
-      return { ...st, composer: { ...st.composer, [field]: `${cur}${cur && !/\s$/.test(cur) ? " " : ""}@${tag} ` } };
-    });
+    const finish = (p: Partial<AssistantTurn>) =>
+      update((s) =>
+        patchSession(s, sid, (x) => ({
+          ...x,
+          updatedAt: Date.now(),
+          turns: x.turns.map((t) => (t.id === turnId ? ({ ...t, ...p } as AssistantTurn) : t)),
+        })),
+      );
 
-  async function run(mode: GenerateMode, opts: { angle?: AngleOption; seed?: Candidate; options?: number } = {}) {
-    setBusy(mode);
-    setError(null);
     try {
-      const ctx = buildContext(state);
-      if (opts.options) ctx.settings = { ...ctx.settings, options: opts.options };
+      if (req.mode === "critique") {
+        const target = session.references.find((r) => r.role === "target");
+        const critique = await api<Critique>("/api/critique", { draft: text, context: target?.text });
+        finish({ status: "done", critique });
+        return;
+      }
       const res = await api<GenerateResponse>("/api/generate", {
         ...ctx,
-        mode,
-        chosenAngle: opts.angle ?? null,
-        seed: opts.seed ?? null,
+        mode: req.mode,
+        chosenAngle: req.angle ?? null,
+        seed: req.seed ?? null,
       });
-      const round = makeRound(opts.angle ? `Drafts: ${opts.angle.title}` : ROUND_LABEL[mode], res);
-      update((st) => ({ ...st, rounds: [round, ...st.rounds].slice(0, 20) }));
+      const n = res.candidates?.length ?? 0;
+      finish({
+        status: "done",
+        angles: res.angles,
+        candidates: res.candidates,
+        formatNote: res.formatNote,
+        question: res.question,
+        label: res.angles
+          ? `${res.angles.length} angles`
+          : `${n} draft${n === 1 ? "" : "s"}${req.angle ? ` · ${req.angle.title}` : req.mode === "formats" ? " · four formats" : ""}`,
+      });
     } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(null);
+      finish({ status: "error", error: (e as Error).message });
     }
   }
 
-  // Angles first when the user hasn't picked one (and isn't just asking for a cleanup).
-  const primaryMode: GenerateMode = s.angle === "auto" && s.creativity > 15 ? "angles" : "variations";
-
-  async function diagnose() {
-    setBusy("critique");
-    setError(null);
-    try {
-      const target = c.references.find((r) => r.role === "target");
-      const out = await api<Critique>("/api/critique", {
-        draft: [c.thought, c.take].filter((x) => x.trim()).join("\n\n"),
-        context: target?.text,
-      });
-      setCritique(out);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(null);
-    }
+  function patchTurn(turnId: string, fn: (t: AssistantTurn) => AssistantTurn) {
+    update((s) => patchActive(s, (x) => ({ ...x, turns: x.turns.map((t) => (t.id === turnId && t.role === "assistant" ? fn(t) : t)) })));
   }
 
-  function patchCandidate(roundId: string, next: Candidate) {
-    update((st) => ({
-      ...st,
-      rounds: st.rounds.map((r) =>
-        r.id === roundId ? { ...r, candidates: r.candidates.map((x) => (x.id === next.id ? next : x)) } : r,
-      ),
-    }));
-  }
+  if (!hydrated) return null;
 
-  function dismiss(roundId: string, cand: Candidate) {
-    update((st) => ({
-      ...st,
-      rounds: st.rounds.map((r) => (r.id === roundId ? { ...r, candidates: r.candidates.filter((x) => x.id !== cand.id) } : r)),
-    }));
-  }
-
-  function addAnswer(answer: string) {
-    setComposer({ thought: `${c.thought.trim()}\n\n${answer}`.trim() });
-    setCritique(null);
-    update((st) => ({ ...st, rounds: st.rounds.map((r, i) => (i === 0 ? { ...r, question: null } : r)) }));
-  }
-
-  const [latest, ...earlier] = state.rounds;
-
-  function renderRound(round: Round) {
+  if (empty) {
     return (
-      <div className="space-y-4">
-        {round.question && (
-          <QuestionBanner question={round.question} onAnswer={addAnswer} />
-        )}
-        {round.formatNote && (
-          <p className="text-sm rounded-lg bg-accent-soft text-accent px-3 py-2">{round.formatNote}</p>
-        )}
-        {round.angles && (
-          <div className="grid sm:grid-cols-2 gap-3">
-            {round.angles.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                disabled={!!busy}
-                onClick={() => run("variations", { angle: a })}
-                className="card p-4 text-left hover:border-accent transition-colors disabled:opacity-60 group"
-                data-testid="angle"
-              >
-                <span className="text-[11px] uppercase tracking-wide text-muted">{a.type}</span>
-                <p className="font-semibold mt-0.5">{a.title}</p>
-                <p className="text-sm text-muted mt-1">{a.summary}</p>
-                <p className="text-sm mt-2 italic">“{a.preview}”</p>
-                <span className="text-xs text-accent mt-2 inline-block opacity-70 group-hover:opacity-100">
-                  Write this angle →
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        {round.candidates.map((cand) => (
-          <CandidateCard
-            key={cand.id}
-            candidate={cand}
-            onChange={(next) => patchCandidate(round.id, next)}
-            onDismiss={(x) => dismiss(round.id, x)}
-            onMoreLike={(x) => run("more-like", { seed: x })}
-            onPush={(x) => run("push", { seed: x })}
-          />
-        ))}
-        {!round.angles && round.candidates.length === 0 && (
-          <p className="text-sm text-muted">All options dismissed. Try a fresh set.</p>
-        )}
+      <div className="min-h-full flex flex-col items-center justify-center px-4 pb-[12vh]">
+        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-center mb-8">What are you thinking about?</h1>
+        <div className="w-full max-w-3xl">
+          <Composer autoFocus menuSide="bottom" busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
+          <Starters />
+          {state.profiles.length === 0 && (
+            <p className="mt-6 text-center text-sm text-muted">
+              <Fingerprint size={14} className="inline -mt-0.5 mr-1" />
+              Drafts sound generic until it knows you.{" "}
+              <Link href="/voice" className="text-accent font-medium">
+                Teach it your voice
+              </Link>
+            </p>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-6 items-start">
-      {/* Composer */}
-      <section className="space-y-4" aria-label="Composer">
-        <h1 className="text-2xl font-semibold tracking-tight">What are you thinking about?</h1>
-
-        {responding && !hasTarget && (
-          <form
-            className="card p-3 space-y-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const v = source.trim();
-              if (!v) return;
-              const tag = /^https?:\/\/\S+$/.test(v) ? addUrl(v) : addText(v);
-              update((st) => ({
-                ...st,
-                composer: {
-                  ...st.composer,
-                  references: st.composer.references.map((r) => (r.tag === tag ? { ...r, role: "target" } : r)),
-                },
-              }));
-              setSource("");
-            }}
-          >
-            <span className="label">{s.postType === "reply" ? "Post you're replying to" : "Post you're quoting"}</span>
-            <textarea
-              className="input"
-              rows={2}
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              placeholder="Paste a link to the post, or its text"
-              aria-label="Source post"
+    <div className="min-h-full flex flex-col">
+      <div className="flex-1 w-full max-w-3xl mx-auto px-4 pt-6 pb-8 space-y-8">
+        {session.turns.map((t) =>
+          t.role === "user" ? (
+            <UserBubble key={t.id} turn={t} />
+          ) : (
+            <AssistantBlock
+              key={t.id}
+              turn={t}
+              onRetry={() => run(t.request, t.source, "Try again")}
+              onFresh={() => run(t.request, t.source, "Fresh set")}
+              onAngle={(a, i) => run({ mode: "variations", angle: a }, t.source, `Write angle ${i}: ${a.title}`)}
+              onMode={(mode, label, options) => run({ mode, options }, t.source, label)}
+              onMoreLike={(c, i) => run({ mode: "more-like", seed: c }, t.source, `More like #${i}`)}
+              onPush={(c, i) => run({ mode: "push", seed: c }, t.source, `Push #${i} further`)}
+              onChangeCandidate={(c) => patchTurn(t.id, (x) => ({ ...x, candidates: x.candidates?.map((y) => (y.id === c.id ? c : y)) }))}
+              onDismiss={(c) => patchTurn(t.id, (x) => ({ ...x, candidates: x.candidates?.filter((y) => y.id !== c.id) }))}
+              onAnswer={(answer) => {
+                update((s) => patchActive(s, (x) => ({ ...x, draft: `${t.source}\n\n${answer}`.trim() })));
+                patchTurn(t.id, (x) => ({ ...x, question: null }));
+              }}
             />
-            <button className="btn btn-sm" type="submit" disabled={!source.trim()}>
-              Add source
-            </button>
-          </form>
+          ),
         )}
-
-        {responding && (
-          <div>
-            <span className="label">Your take — optional</span>
-            <TagTextarea
-              ariaLabel="Your take"
-              value={c.take}
-              onChange={(take) => setComposer({ take })}
-              references={c.references}
-              rows={3}
-              placeholder="Leave blank to see angles, jot a rough thought, or paste your draft reply."
-            />
-          </div>
-        )}
-
-        <div>
-          {responding && <span className="label">Notes & instructions — optional</span>}
-          <TagTextarea
-            ariaLabel="Your thought"
-            autoFocus={hydrated && !responding}
-            value={c.thought}
-            onChange={(thought) => setComposer({ thought })}
-            references={c.references}
-            onPasteUrl={(url) => addUrl(url)}
-            rows={responding ? 3 : 6}
-            placeholder={
-              responding
-                ? "e.g. Use the stat from @article but don't mention the article."
-                : "An idea, a rough draft, or instructions like “Write a quote tweet of @original using the point from @article.” Paste a link to add it as a reference."
-            }
-          />
-          {unknown.length > 0 && (
-            <p className="text-xs text-warn mt-1">
-              {unknown.map((t) => `@${t}`).join(", ")} {unknown.length === 1 ? "isn't a reference" : "aren't references"}; it will be sent as a normal mention.
-            </p>
-          )}
-          {structure && (
-            <p className="text-xs text-muted mt-1">
-              Using structure <span className="font-medium text-fg">{structure.name}</span> ({structure.pattern}).{" "}
-              <button className="text-accent" onClick={() => update((st) => ({ ...st, composer: { ...st.composer, settings: { ...st.composer.settings, structureId: null } } }))} type="button">
-                Remove
-              </button>
-            </p>
-          )}
+        <div ref={endRef} />
+      </div>
+      <div className="sticky bottom-0 bg-gradient-to-t from-bg via-bg to-transparent pt-6 pb-4 px-4">
+        <div className="max-w-3xl mx-auto">
+          <Composer busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
+          <p className="text-center text-[11px] text-muted mt-2">Moxie can get things wrong. Check facts before you post.</p>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="btn btn-primary !px-4 !py-2 !text-sm"
-            disabled={!hasInput || !!busy || loadingRefs}
-            onClick={() => run(primaryMode)}
-            type="button"
-          >
-            {busy === primaryMode ? "Finding…" : loadingRefs ? "Reading links…" : "Find the tweet"}
-          </button>
-          {primaryMode === "angles" && (
-            <button className="btn" disabled={!hasInput || !!busy} onClick={() => run("variations")} type="button">
-              {busy === "variations" ? "Writing…" : "Skip to drafts"}
-            </button>
-          )}
-          <button className="btn" disabled={!hasInput || !!busy} onClick={() => run("surprise")} type="button">
-            {busy === "surprise" ? "Surprising…" : "Surprise me"}
-          </button>
-          <button className="btn" disabled={!hasInput || !!busy} onClick={() => run("formats")} type="button">
-            {busy === "formats" ? "Exploring…" : "Explore formats"}
-          </button>
-          <button
-            className="btn"
-            disabled={!(c.thought.trim() || c.take.trim()) || !!busy}
-            onClick={diagnose}
-            type="button"
-            title="Explains what's weak and asks one useful question before you polish"
-          >
-            {busy === "critique" ? "Reading…" : "Find the real thought"}
-          </button>
-        </div>
-
-        {critique && <CritiquePanel critique={critique} onAnswer={addAnswer} onClose={() => setCritique(null)} />}
-
-        <details open={showSettings} onToggle={(e) => setShowSettings((e.target as HTMLDetailsElement).open)} className="card p-4">
-          <summary className="cursor-pointer text-sm font-medium select-none">Settings</summary>
-          <div className="mt-4">
-            <Controls />
-          </div>
-        </details>
-
-        <div className="card p-4">
-          <ReferencesPanel onInsertTag={appendTag("thought")} />
-        </div>
-
+function Starters() {
+  const { update } = useStore();
+  const { set } = useSettings();
+  const focus = () => document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]')?.focus();
+  const items = [
+    { icon: <MessageCircle size={15} />, label: "Reply to a post", apply: () => set({ postType: "reply" }) },
+    { icon: <Quote size={15} />, label: "Quote tweet", apply: () => set({ postType: "quote" }) },
+    { icon: <Megaphone size={15} />, label: "Announce something", apply: () => set({ postType: "announcement" }) },
+    { icon: <Layers size={15} />, label: "Write a thread", apply: () => set({ postType: "original", format: "thread" }) },
+    {
+      icon: <PenLine size={15} />,
+      label: "Polish my draft",
+      apply: () => {
+        set({ postType: "original", creativity: 15 });
+        update((s) => ({ ...s, sendMode: "variations" }));
+      },
+    },
+  ];
+  return (
+    <div className="flex flex-wrap justify-center gap-2 mt-4">
+      {items.map((i) => (
         <button
-          className="btn btn-ghost btn-sm text-muted"
+          key={i.label}
           type="button"
           onClick={() => {
-            if (confirm("Clear the composer and references?"))
-              update((st) => ({ ...st, composer: { ...EMPTY_COMPOSER, settings: st.composer.settings } }));
+            i.apply();
+            focus();
           }}
+          className="inline-flex items-center gap-2 rounded-full border border-line px-3.5 py-2 text-sm text-muted hover:bg-panel-2 hover:text-fg"
         >
-          Clear composer
+          {i.icon}
+          {i.label}
         </button>
-      </section>
-
-      {/* Results */}
-      <section className="space-y-4 min-w-0" aria-label="Results" aria-live="polite">
-        {error && <p className="card p-3 text-sm text-bad border-bad/40">{error}</p>}
-        {busy && busy !== "critique" && (
-          <div className="card p-4 text-sm text-muted animate-pulse">Writing in your voice…</div>
-        )}
-        {!latest && !busy && (
-          <EmptyState hasProfile={state.profiles.length > 0} />
-        )}
-        {latest && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-semibold">{latest.label}</h2>
-              <span className="ml-auto flex gap-2">
-                <button className="btn btn-sm" disabled={!!busy || !hasInput} onClick={() => run(latest.angles ? "angles" : "variations")} type="button">
-                  Fresh set
-                </button>
-                <button className="btn btn-sm" disabled={!!busy || !hasInput} onClick={() => run("directions", { options: 5 })} type="button">
-                  Explore 5 completely different directions
-                </button>
-              </span>
-            </div>
-            {renderRound(latest)}
-          </div>
-        )}
-        {earlier.length > 0 && (
-          <details className="space-y-3">
-            <summary className="cursor-pointer text-sm text-muted select-none">Earlier rounds ({earlier.length})</summary>
-            {earlier.map((r) => (
-              <div key={r.id} className="space-y-3 pt-3">
-                <h3 className="text-sm font-medium text-muted">
-                  {r.label} · {new Date(r.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                </h3>
-                {renderRound(r)}
-              </div>
-            ))}
-            <button className="btn btn-ghost btn-sm text-muted" type="button" onClick={() => update((st) => ({ ...st, rounds: st.rounds.slice(0, 1) }))}>
-              Clear earlier rounds
-            </button>
-          </details>
-        )}
-      </section>
+      ))}
     </div>
+  );
+}
+
+function UserBubble({ turn }: { turn: UserTurn }) {
+  if (turn.action) {
+    return (
+      <div className="flex justify-end">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-panel-2 px-3 py-1.5 text-sm text-muted">
+          <RefreshCw size={13} /> {turn.action}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-end gap-1.5">
+      <div className="max-w-[85%] rounded-3xl bg-panel-2 px-4 py-2.5 whitespace-pre-wrap text-[15px] leading-relaxed">
+        {turn.text || <span className="text-muted italic">Find something to say about the source</span>}
+      </div>
+      {turn.tags.length > 0 && (
+        <span className="text-xs text-muted inline-flex items-center gap-1">
+          <AtSign size={12} /> {turn.tags.map((t) => `@${t}`).join(" ")}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function AssistantBlock({
+  turn,
+  onRetry,
+  onFresh,
+  onAngle,
+  onMode,
+  onMoreLike,
+  onPush,
+  onChangeCandidate,
+  onDismiss,
+  onAnswer,
+}: {
+  turn: AssistantTurn;
+  onRetry: () => void;
+  onFresh: () => void;
+  onAngle: (a: AngleOption, i: number) => void;
+  onMode: (mode: RunRequest["mode"], label: string, options?: number) => void;
+  onMoreLike: (c: Candidate, i: number) => void;
+  onPush: (c: Candidate, i: number) => void;
+  onChangeCandidate: (c: Candidate) => void;
+  onDismiss: (c: Candidate) => void;
+  onAnswer: (answer: string) => void;
+}) {
+  const header = (
+    <div className="flex items-center gap-2 text-sm text-muted mb-3">
+      <span className="h-6 w-6 rounded-full bg-fg text-bg grid place-items-center">
+        <Sparkles size={13} />
+      </span>
+      <span className="font-medium text-fg">{turn.status === "pending" ? (turn.kind === "critique" ? "Reading your draft" : "Writing in your voice") : turn.label}</span>
+    </div>
+  );
+
+  if (turn.status === "pending") {
+    return (
+      <section aria-busy="true">
+        {header}
+        <div className={turn.kind === "angles" ? "grid sm:grid-cols-2 gap-3" : "space-y-3"}>
+          {[0, 1, 2, 3].slice(0, turn.kind === "critique" ? 1 : turn.kind === "angles" ? 4 : 3).map((i) => (
+            <div key={i} className="rounded-2xl border border-line p-5 space-y-2.5 animate-pulse">
+              <div className="h-3 w-1/3 rounded bg-panel-2" />
+              <div className="h-3 w-full rounded bg-panel-2" />
+              <div className="h-3 w-4/5 rounded bg-panel-2" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (turn.status === "error") {
+    return (
+      <section>
+        {header}
+        <div className="rounded-2xl border border-bad/30 bg-bad/5 p-4 text-sm flex items-center gap-3">
+          <span className="text-bad flex-1">{turn.error}</span>
+          <button type="button" className="btn btn-sm" onClick={onRetry}>
+            Try again
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (turn.kind === "critique" && turn.critique) {
+    return (
+      <section>
+        {header}
+        <CritiquePanel critique={turn.critique} onAnswer={onAnswer} />
+      </section>
+    );
+  }
+
+  const chip = "inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-muted hover:bg-panel-2 hover:text-fg";
+
+  return (
+    <section>
+      {header}
+      {turn.question && <QuestionBanner question={turn.question} onAnswer={onAnswer} />}
+      {turn.formatNote && <p className="text-sm text-muted mb-3">{turn.formatNote}</p>}
+
+      {turn.angles && (
+        <>
+          <p className="text-sm text-muted mb-3">Pick an angle and I&apos;ll write drafts for it.</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {turn.angles.map((a, i) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => onAngle(a, i + 1)}
+                className="group text-left rounded-2xl border border-line bg-panel p-4 hover:border-fg/40 hover:shadow-md transition-all"
+                data-testid="angle"
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="h-5 w-5 rounded-md bg-panel-2 text-xs font-semibold grid place-items-center">{i + 1}</span>
+                  <span className="text-[11px] uppercase tracking-wide text-muted">{a.type}</span>
+                </div>
+                <p className="font-semibold">{a.title}</p>
+                <p className="text-sm text-muted mt-1">{a.summary}</p>
+                <p className="text-sm mt-2.5 border-l-2 border-line pl-3 italic">{a.preview}</p>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent opacity-0 group-hover:opacity-100 transition-opacity">
+                  Write this angle →
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button type="button" className={chip} onClick={() => onMode("angles", "More angles")}>
+              <RefreshCw size={13} /> More angles
+            </button>
+            <button type="button" className={chip} onClick={() => onMode("variations", "Skip angles, write drafts")}>
+              {SEND_MODES.variations.icon} Just write drafts
+            </button>
+            <button type="button" className={chip} onClick={() => onMode("surprise", "Surprise me")}>
+              <Shuffle size={13} /> Surprise me
+            </button>
+          </div>
+        </>
+      )}
+
+      {turn.candidates && (
+        <>
+          <div className="space-y-3">
+            {turn.candidates.map((c, i) => (
+              <CandidateCard
+                key={c.id}
+                candidate={c}
+                index={i + 1}
+                source={turn.source}
+                onChange={onChangeCandidate}
+                onDismiss={onDismiss}
+                onMoreLike={(x) => onMoreLike(x, i + 1)}
+                onPush={(x) => onPush(x, i + 1)}
+              />
+            ))}
+            {turn.candidates.length === 0 && <p className="text-sm text-muted">All drafts hidden. Try a fresh set.</p>}
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button type="button" className={chip} onClick={onFresh}>
+              <RefreshCw size={13} /> Fresh set
+            </button>
+            <button type="button" className={chip} onClick={() => onMode("directions", "5 completely different directions", 5)}>
+              <Shuffle size={13} /> 5 different directions
+            </button>
+            <button type="button" className={chip} onClick={() => onMode("formats", "Explore formats")}>
+              <Layers size={13} /> Try other formats
+            </button>
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
 function QuestionBanner({ question, onAnswer }: { question: string; onAnswer: (a: string) => void }) {
-  const [answer, setAnswer] = useState("");
   return (
     <form
-      className="card p-3 space-y-2 border-accent/40"
+      className="rounded-2xl bg-accent-soft/60 p-4 mb-3 space-y-2"
       onSubmit={(e) => {
         e.preventDefault();
-        if (answer.trim()) onAnswer(answer.trim());
+        const input = (e.currentTarget.elements.namedItem("answer") as HTMLInputElement).value.trim();
+        if (input) onAnswer(input);
       }}
     >
       <p className="text-sm">
-        <span className="font-medium">One question to find more substance:</span> {question}
+        <span className="font-medium">To make this stronger:</span> {question}
       </p>
       <div className="flex gap-2">
-        <input className="input" value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Your answer…" aria-label="Answer" />
-        <button className="btn btn-sm" type="submit" disabled={!answer.trim()}>
-          Add
+        <input name="answer" className="input" placeholder="Answer in your own words…" aria-label="Answer" />
+        <button className="btn btn-sm" type="submit">
+          Add to message
         </button>
       </div>
     </form>
-  );
-}
-
-function EmptyState({ hasProfile }: { hasProfile: boolean }) {
-  return (
-    <div className="card p-8 text-center space-y-3">
-      <p className="text-lg font-medium">Teach it what sounds like you, then get several useful ways to say what you mean.</p>
-      <ul className="text-sm text-muted space-y-1">
-        <li>Write a rough thought, paste a draft, or add a link.</li>
-        <li>
-          <span className="font-medium text-fg">Find the tweet</span> proposes distinct angles; pick one to get drafts.
-        </li>
-        <li>Mark drafts “More like this” or “Never like this” and it learns your taste.</li>
-      </ul>
-      {!hasProfile && (
-        <Link href="/voice" className="btn btn-primary">
-          Set up your voice
-        </Link>
-      )}
-    </div>
   );
 }

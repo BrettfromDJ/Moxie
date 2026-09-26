@@ -16,18 +16,22 @@ To try the whole UI without an API key, run `MOXIE_MOCK=1 npm run dev`. Every mo
 
 ## What's in it
 
-**Write** (`/`)
-- A composer that asks "What are you thinking about?" You can enter an idea, paste a draft, or write instructions like "Write a quote tweet of @original using the stat from @research."
-- Controls for post type (original, quote, reply, announcement, link, image, remix), format, length, voice, angle, creativity, number of options, goal, structure, and writing mode. Format is kept separate from length. Post type changes the model's instructions.
-- **Find the tweet** proposes genuinely different angles first; pick one to get drafts. You can also use **Skip to drafts**, **Surprise me** (less obvious responses), **Explore formats** (one-liner / short / long / thread), and **Explore 5 completely different directions**.
-- Quote tweets and replies take the source post plus an optional **"Your take"** field. Leave it blank for angles, jot a rough thought, or paste your draft. Replies also have a relationship control (friend / peer / stranger / customer).
-- **Find the real thought** diagnoses a weak draft (vague language, obvious conclusion, missing detail…) and asks one useful question.
-- Each result has **More like this**, **Never like this** (with an optional reason), **Push further**, **Edit**, **Fit to X**, **Shorten**, **De-AI this**, a free-form revise box, Save, and "I posted this".
-- Threads appear as editable cards with roles (hook, setup, insight, example, takeaway, close). You can reorder, add, or delete posts, shorten one, strengthen the opening, or improve pacing.
-- Each result shows weighted X character count, reading time, structure, the voice-match *estimate*, avoid-list and AI-pattern checks, and a warning when it repeats something you already posted. It makes no virality predictions.
+**Write** (`/`): a ChatGPT-style workspace
+- A sidebar lists your past drafts (conversations), grouped by date. It also links to the Voice, Structures, De-AI, and Library tools. **New draft** starts fresh.
+- One big composer asks "What are you thinking about?". Enter sends and Shift+Enter adds a new line. Its toolbar keeps everything else one click away:
+  - **+**: add a link, pasted text, or an image as a source.
+  - **Post type**: original, quote, reply, announcement, link, image, or remix.
+  - **Settings**: a Midjourney-style panel of pill options for format, length, number of options, creativity, angle, reply relationship, goal, style, structure, and X Premium limits.
+  - **Voice**: pick which voice profile to write in.
+  - **Send mode** (next to the send button): **Find angles** (the default), **Write drafts**, **Surprise me**, **Explore formats**, or **Find the real thought** (a critique of your draft).
+- Results appear as a conversation. Angles show as a numbered grid; click one to get drafts. Button actions ("More like #2", "Push #1 further", "Fresh set", "5 different directions", "Try other formats") show up as small bubbles in the conversation. Follow-up messages keep the earlier context.
+- Each draft card shows the text, one line of facts (X character count, reading time, a voice-match estimate, and any problems), and an icon row: copy, edit, more like this, never like this, push further, and Fit to X. Less common actions sit in a "…" menu: ask for a change, shorten, De-AI, strengthen the hook or opening, improve pacing, save, and "I posted this".
+- Threads display as numbered posts. Hover a post to reorder, shorten, or delete it.
+- For quotes and replies, the composer asks for the source post, and your message becomes your (optional) take.
+- Starter chips on the empty screen set up common tasks: reply to a post, quote tweet, announce something, write a thread, polish a draft.
 
 **References**
-- Every link, pasted text, or image becomes a reference with a stable tag (`@link1`, `@text1`, `@image1`). You can rename a tag (renaming rewrites every use), and typing `@` autocompletes. Pasting a lone URL into the composer adds it automatically.
+- Every link, pasted text, or image becomes a chip above the message box, with a stable tag (`@link1`, `@text1`, `@image1`). Click a chip to rename it (renaming rewrites every use), change its role, or remove it. Typing `@` autocompletes. Pasting a lone URL into the composer adds it automatically.
 - Each reference has a role: **target** (what you're responding to), **facts**, **style example only**, or **background**. You can also set "replies to @x" relationships.
 - The server fetches link content, not the model: X posts via the X API (if `X_BEARER_TOKEN` is set) or public oEmbed, and pages via Mozilla Readability. If a source can't be read, the card says so and asks you to paste the text instead.
 - Your instructions and the source material go to the model in separate blocks. Source content is marked as data, never instructions.

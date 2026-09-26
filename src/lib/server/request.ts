@@ -27,6 +27,9 @@ export function normalizeContext<T extends GenerationContext>(body: T): T {
   const take = String(body.take ?? "").slice(0, 10000);
   const references = Array.isArray(body.references) ? body.references.slice(0, 12) : [];
   const feedback = Array.isArray(body.feedback) ? body.feedback.slice(-30) : [];
+  const history = Array.isArray(body.history)
+    ? body.history.slice(-6).map((h) => String(h).slice(0, 4000))
+    : [];
   if (!thought.trim() && !take.trim() && !references.length) {
     throw new AppError(400, "Add a thought, a draft, or a reference first.");
   }
@@ -37,6 +40,7 @@ export function normalizeContext<T extends GenerationContext>(body: T): T {
     take,
     references,
     feedback,
+    history,
     voice: body.voice ?? null,
     taste: body.taste ?? null,
     structure: body.structure ?? null,

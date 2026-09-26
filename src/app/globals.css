@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f7f7f5;
+  --bg: #ffffff;
   --panel: #ffffff;
-  --panel-2: #f1f1ee;
-  --line: #e4e4df;
+  --panel-2: #f3f3f1;
+  --line: #e5e5e1;
   --fg: #1a1a18;
   --muted: #6b6b64;
   --accent: #4f46e5;
@@ -19,10 +19,10 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111110;
-    --panel: #1a1a19;
-    --panel-2: #232321;
-    --line: #2f2f2c;
+    --bg: #1c1c1b;
+    --panel: #242423;
+    --panel-2: #2d2d2b;
+    --line: #3a3a37;
     --fg: #ececea;
     --muted: #9a9a92;
     --accent: #818cf8;
@@ -140,7 +140,7 @@ body {
   font: inherit;
   font-size: 1rem;
   line-height: 1.6;
-  padding: 0.9rem 1rem;
+  padding: 0.5rem 0.25rem;
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;

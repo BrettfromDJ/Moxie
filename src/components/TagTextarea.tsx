@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Reference } from "@/lib/types";
 
-// A textarea where @tags that match a reference render as chips (via a
-// highlighted backdrop), typing "@" opens autocomplete, and pasting a lone URL
-// turns it into a reference.
+// A borderless, auto-growing textarea where @tags that match a reference render
+// as chips (via a highlighted backdrop), typing "@" opens autocomplete, pasting
+// a lone URL turns it into a reference, and Enter submits (Shift+Enter = newline).
 
 const TAG_RE = /@([A-Za-z0-9_-]+)/g;
+const MAX_HEIGHT = 260;
 
 function escapeHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -18,19 +19,21 @@ export function TagTextarea({
   onChange,
   references,
   placeholder,
-  rows = 5,
   onPasteUrl,
+  onSubmit,
   ariaLabel,
   autoFocus,
+  minRows = 1,
 }: {
   value: string;
   onChange: (v: string) => void;
   references: Reference[];
   placeholder?: string;
-  rows?: number;
   onPasteUrl?: (url: string) => string | null; // returns the new tag to insert
+  onSubmit?: () => void;
   ariaLabel: string;
   autoFocus?: boolean;
+  minRows?: number;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const backdrop = useRef<HTMLDivElement>(null);
@@ -47,10 +50,20 @@ export function TagTextarea({
     return escaped + "\n ";
   }, [value, tags]);
 
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT)}px`;
+    el.style.overflowY = el.scrollHeight > MAX_HEIGHT ? "auto" : "hidden";
+  }, [value]);
+
   const matches = useMemo(() => {
     if (!query) return [];
     const q = query.text.toLowerCase();
-    return references.filter((r) => r.tag.toLowerCase().startsWith(q) || (r.title ?? r.author ?? "").toLowerCase().includes(q)).slice(0, 6);
+    return references
+      .filter((r) => r.tag.toLowerCase().startsWith(q) || (r.title ?? r.author ?? "").toLowerCase().includes(q))
+      .slice(0, 6);
   }, [query, references]);
 
   function detect(el: HTMLTextAreaElement) {
@@ -81,63 +94,73 @@ export function TagTextarea({
 
   return (
     <div className="relative">
-      <div className="relative rounded-xl border border-line bg-panel focus-within:border-accent focus-within:shadow-[0_0_0_3px_var(--accent-soft)]">
-        <div
-          ref={backdrop}
-          aria-hidden
-          className="composer-layer composer-backdrop absolute inset-0 overflow-hidden text-transparent pointer-events-none"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-        <textarea
-          ref={ref}
-          aria-label={ariaLabel}
-          autoFocus={autoFocus}
-          rows={rows}
-          value={value}
-          placeholder={placeholder}
-          spellCheck
-          className="composer-layer relative block w-full resize-y bg-transparent outline-none placeholder:text-muted caret-fg min-h-[6rem]"
-          onChange={(e) => {
-            onChange(e.target.value);
-            detect(e.target);
-          }}
-          onClick={(e) => detect(e.currentTarget)}
-          onBlur={() => setTimeout(() => setQuery(null), 150)}
-          onScroll={(e) => {
-            if (backdrop.current) backdrop.current.scrollTop = e.currentTarget.scrollTop;
-          }}
-          onKeyDown={(e) => {
-            if (!query || !matches.length) return;
+      <div
+        ref={backdrop}
+        aria-hidden
+        className="composer-layer composer-backdrop absolute inset-0 overflow-hidden text-transparent pointer-events-none"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      <textarea
+        ref={ref}
+        aria-label={ariaLabel}
+        autoFocus={autoFocus}
+        rows={minRows}
+        value={value}
+        placeholder={placeholder}
+        spellCheck
+        className="composer-layer relative block w-full resize-none bg-transparent outline-none placeholder:text-muted caret-fg"
+        onChange={(e) => {
+          onChange(e.target.value);
+          detect(e.target);
+        }}
+        onClick={(e) => detect(e.currentTarget)}
+        onBlur={() => setTimeout(() => setQuery(null), 150)}
+        onScroll={(e) => {
+          if (backdrop.current) backdrop.current.scrollTop = e.currentTarget.scrollTop;
+        }}
+        onKeyDown={(e) => {
+          if (query && matches.length) {
             if (e.key === "ArrowDown") {
               e.preventDefault();
               setActive((a) => (a + 1) % matches.length);
-            } else if (e.key === "ArrowUp") {
+              return;
+            }
+            if (e.key === "ArrowUp") {
               e.preventDefault();
               setActive((a) => (a - 1 + matches.length) % matches.length);
-            } else if (e.key === "Enter" || e.key === "Tab") {
+              return;
+            }
+            if (e.key === "Enter" || e.key === "Tab") {
               e.preventDefault();
               insertTag(matches[active].tag);
-            } else if (e.key === "Escape") {
-              setQuery(null);
+              return;
             }
-          }}
-          onPaste={(e) => {
-            if (!onPasteUrl) return;
-            const text = e.clipboardData.getData("text").trim();
-            if (!/^https?:\/\/\S+$/.test(text)) return;
-            const tag = onPasteUrl(text);
-            if (!tag) return;
+            if (e.key === "Escape") {
+              setQuery(null);
+              return;
+            }
+          }
+          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && onSubmit) {
             e.preventDefault();
-            const el = e.currentTarget;
-            const before = value.slice(0, el.selectionStart);
-            const after = value.slice(el.selectionEnd);
-            const insert = `${before && !/\s$/.test(before) ? " " : ""}@${tag} `;
-            onChange(before + insert + after);
-          }}
-        />
-      </div>
+            onSubmit();
+          }
+        }}
+        onPaste={(e) => {
+          if (!onPasteUrl) return;
+          const text = e.clipboardData.getData("text").trim();
+          if (!/^https?:\/\/\S+$/.test(text)) return;
+          const tag = onPasteUrl(text);
+          if (!tag) return;
+          e.preventDefault();
+          const el = e.currentTarget;
+          const before = value.slice(0, el.selectionStart);
+          const after = value.slice(el.selectionEnd);
+          const insert = `${before && !/\s$/.test(before) ? " " : ""}@${tag} `;
+          onChange(before + insert + after);
+        }}
+      />
       {query && matches.length > 0 && (
-        <ul role="listbox" className="absolute z-20 mt-1 w-full max-w-sm card shadow-lg py-1 text-sm">
+        <ul role="listbox" className="absolute z-50 bottom-full mb-2 left-2 w-72 rounded-xl border border-line bg-panel shadow-xl py-1 text-sm">
           {matches.map((r, i) => (
             <li
               key={r.id}
@@ -147,7 +170,7 @@ export function TagTextarea({
                 e.preventDefault();
                 insertTag(r.tag);
               }}
-              className={`px-3 py-1.5 cursor-pointer flex gap-2 items-baseline ${i === active ? "bg-accent-soft" : ""}`}
+              className={`px-3 py-1.5 cursor-pointer flex gap-2 items-baseline ${i === active ? "bg-panel-2" : ""}`}
             >
               <span className="font-medium text-chip-fg">@{r.tag}</span>
               <span className="text-muted truncate">{r.title ?? r.author ?? r.excerpt ?? r.kind}</span>

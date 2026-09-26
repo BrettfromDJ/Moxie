@@ -211,6 +211,7 @@ export interface GenerationContext {
   taste: TasteProfile | null;
   feedback: FeedbackSignal[];
   structure: Structure | null;
+  history?: string[]; // earlier messages from the author in this conversation
 }
 
 export type GenerateMode =

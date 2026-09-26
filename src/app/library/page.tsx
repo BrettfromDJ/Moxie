@@ -16,7 +16,7 @@ export default function LibraryPage() {
   const [tab, setTab] = useState<"saved" | "posted" | "signals">("saved");
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl mx-auto px-4 sm:px-8 py-8">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Library</h1>
         <p className="text-sm text-muted">
