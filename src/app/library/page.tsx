@@ -1,6 +1,8 @@
 "use client";
 
 import { PageHeader } from "@/components/Shell";
+import { Tweet, TweetFrame } from "@/components/TweetPreview";
+import { X_PREMIUM_LIMIT } from "@/lib/xcount";
 
 import { useState } from "react";
 import { candidateText, useStore } from "@/lib/store";
@@ -53,17 +55,15 @@ export default function LibraryPage() {
               <p className="text-xs text-muted">
                 {c.angle} · {c.structure}
               </p>
-              {c.thread.length ? (
-                <ol className="space-y-2 list-decimal pl-5">
-                  {c.thread.map((t) => (
-                    <li key={t.id} className="whitespace-pre-wrap text-sm">
-                      {t.text}
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="whitespace-pre-wrap text-sm">{c.text}</p>
-              )}
+              <TweetFrame>
+                {c.thread.length ? (
+                  c.thread.map((t, i) => (
+                    <Tweet key={t.id} text={t.text} limit={X_PREMIUM_LIMIT} connectAbove={i > 0} connectBelow={i < c.thread.length - 1} />
+                  ))
+                ) : (
+                  <Tweet text={c.text} limit={X_PREMIUM_LIMIT} />
+                )}
+              </TweetFrame>
               <div className="flex gap-2">
                 <button className="btn btn-sm" type="button" onClick={() => navigator.clipboard.writeText(candidateText(c))}>
                   Copy

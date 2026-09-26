@@ -59,3 +59,36 @@ export function formatReadingTime(seconds: number): string {
   const s = seconds % 60;
   return s ? `${m}m ${s}s read` : `${m}m read`;
 }
+
+// Splits text at the point where X's weighted count passes `limit`, so the
+// overflow can be highlighted the way X's composer does.
+export function splitAtLimit(text: string, limit: number): [string, string] {
+  const urls = Array.from(text.matchAll(new RegExp(URL_RE.source, URL_RE.flags)), (m) => [m.index!, m.index! + m[0].length] as const);
+  const segs: { index: number; segment: string }[] =
+    typeof Intl !== "undefined" && "Segmenter" in Intl
+      ? Array.from((segmenter ??= new Intl.Segmenter(undefined, { granularity: "grapheme" })).segment(text), (s) => ({ index: s.index, segment: s.segment }))
+      : Array.from(text).reduce<{ index: number; segment: string }[]>((acc, ch) => {
+          const prev = acc[acc.length - 1];
+          acc.push({ index: prev ? prev.index + prev.segment.length : 0, segment: ch });
+          return acc;
+        }, []);
+  let total = 0;
+  let si = 0;
+  while (si < segs.length) {
+    const pos = segs[si].index;
+    const url = urls.find(([start]) => start === pos);
+    let weight: number;
+    let next = si + 1;
+    if (url) {
+      weight = URL_WEIGHT;
+      while (next < segs.length && segs[next].index < url[1]) next++;
+    } else {
+      const g = segs[si].segment;
+      weight = EMOJI_RE.test(g) ? 2 : Array.from(g).reduce((w, ch) => w + codePointWeight(ch.codePointAt(0)!), 0);
+    }
+    if (total + weight > limit) return [text.slice(0, pos), text.slice(pos)];
+    total += weight;
+    si = next;
+  }
+  return [text, ""];
+}

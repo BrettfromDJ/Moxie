@@ -81,6 +81,13 @@ export interface PostedItem {
   at: number;
 }
 
+// How posts are shown in previews (name, handle, avatar).
+export interface Identity {
+  name: string;
+  handle: string;
+  avatar?: string; // small data URL
+}
+
 export interface AppState {
   profiles: VoiceProfile[];
   activeProfileId: string | null;
@@ -93,6 +100,8 @@ export interface AppState {
   activeSessionId: string;
   lastSettings: ComposerSettings;
   sendMode: SendMode;
+  identity: Identity;
+  previewDevice: "desktop" | "phone";
 }
 
 let n = 0;
@@ -126,6 +135,8 @@ function initial(): AppState {
     activeSessionId: first.id,
     lastSettings: DEFAULT_SETTINGS,
     sendMode: "angles",
+    identity: { name: "", handle: "" },
+    previewDevice: "desktop",
   };
 }
 

@@ -27,7 +27,9 @@ To try the whole UI without an API key, run `MOXIE_MOCK=1 npm run dev`. Every mo
   - **Send mode** (next to the send button): **Find angles** (the default), **Write drafts**, **Surprise me**, **Explore formats**, **Find the real thought** (a critique of your draft), or **Check for AI writing** (paste any post to get flags and a cleaner version).
 - Results appear as a conversation. Angles show as a numbered table, like a stock screener; click one to get drafts. Button actions ("More like #2", "Push #1 further", "Fresh set", "5 different directions", "Try other formats") show up as small bubbles in the conversation. Follow-up messages keep the earlier context.
 - Each draft card shows the text, one line of facts (X character count, reading time, a voice-match estimate, and any problems), and an icon row: copy, edit, more like this, never like this, push further, and Fit to X. Less common actions sit in a "…" menu: ask for a change, shorten, De-AI, strengthen the hook or opening, improve pacing, save, and "I posted this".
-- Threads display as numbered posts. Hover a post to reorder, shorten, or delete it.
+- Drafts are shown as they'll look on X (dark mode), with your name, handle, and photo, and blue links, @mentions, and #hashtags. A **Desktop / Phone** toggle shows how lines wrap at each width. Text past X's limit is highlighted in red, like X's composer. With X Premium on, long posts get X's "Show more" cutoff. [Placeholders] are highlighted so you remember to fill them in.
+- Threads display as connected posts. Hover a post to reorder, shorten, or delete it.
+- Set the name, handle, and photo used in previews under Voice & taste, in "How your posts look".
 - For quotes and replies, the composer asks for the source post, and your message becomes your (optional) take.
 - Starter chips on the empty screen set up common tasks: reply to a post, quote tweet, announce something, write a thread, polish a draft.
 

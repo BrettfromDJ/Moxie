@@ -1,8 +1,9 @@
 "use client";
 
-import { FileText, Fingerprint, Heart, Plus, Share2, Sparkles } from "lucide-react";
+import { Eye, FileText, Fingerprint, Heart, Plus, Share2, Sparkles } from "lucide-react";
 import { InspirationsSection } from "@/components/Inspirations";
 import { PageHeader, SectionTitle } from "@/components/Shell";
+import { IdentityEditor } from "@/components/TweetPreview";
 
 import { useEffect, useState } from "react";
 import { ListEditor } from "@/components/ListEditor";
@@ -119,6 +120,11 @@ export default function VoicePage() {
         ) : (
           <p className="text-sm text-muted">Pick a profile above.</p>
         )}
+      </section>
+
+      <section className="space-y-5" aria-label="How your posts look">
+        <SectionTitle tone="blue" icon={<Eye size={17} />}>How your posts look</SectionTitle>
+        <IdentityEditor />
       </section>
 
       <InspirationsSection />

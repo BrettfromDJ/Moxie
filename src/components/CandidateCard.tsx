@@ -27,6 +27,7 @@ import { activeProfile, activeSession, addFeedback, api, buildContext, candidate
 import type { Candidate, CardRole, RefineAction, ThreadCard } from "@/lib/types";
 import { formatReadingTime, readingSeconds, xLength } from "@/lib/xcount";
 import { MenuItem, Popover } from "./Popover";
+import { DeviceToggle, Tweet, TweetFrame } from "./TweetPreview";
 
 const ROLES: CardRole[] = ["hook", "setup", "insight", "example", "takeaway", "close", "other"];
 
@@ -164,27 +165,64 @@ export function CandidateCard({
 
   return (
     <article className={`group rounded-2xl border border-line bg-panel p-4 sm:p-5 transition-opacity ${busy ? "opacity-60" : ""}`} data-testid="candidate">
-      <header className="flex items-center gap-2 text-xs text-muted mb-2">
+      <header className="flex items-center gap-2 text-xs text-muted mb-3">
         <span className="h-5 min-w-5 px-1 rounded-md bg-panel-3 text-fg font-semibold grid place-items-center tabular-nums">{index}</span>
         <span className="font-medium text-fg">{c.angle}</span>
         <span className="truncate hidden sm:inline">· {c.structure}</span>
+        <span className="ml-auto">
+          <DeviceToggle />
+        </span>
       </header>
 
-      {!isThread &&
-        (editing ? (
-          <textarea
-            className="input text-[15px] leading-relaxed"
-            rows={Math.max(3, draft.split("\n").length + 1)}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            autoFocus
-            aria-label="Edit post"
-          />
-        ) : (
-          <p className="whitespace-pre-wrap text-[16px] leading-relaxed text-fg">{c.text}</p>
-        ))}
+      {!editing && (
+        <TweetFrame>
+          {isThread ? (
+            c.thread.map((t, i) => (
+              <Tweet
+                key={t.id}
+                text={t.text}
+                limit={limit}
+                connectAbove={i > 0}
+                connectBelow={i < c.thread.length - 1}
+                trailing={
+                  <span className="flex items-center gap-0.5 text-[#71767b]">
+                    <span className="text-[11px] uppercase tracking-wide px-1.5">{t.role}</span>
+                    <span className="flex">
+                      <IconButton label={`Move post ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                        <ArrowUp size={14} />
+                      </IconButton>
+                      <IconButton label={`Move post ${i + 1} down`} disabled={i === c.thread.length - 1} onClick={() => move(i, 1)}>
+                        <ArrowDown size={14} />
+                      </IconButton>
+                      <IconButton label={`Shorten post ${i + 1}`} disabled={!!busy} onClick={() => refine("shorten-card", t.id)}>
+                        <Scissors size={14} />
+                      </IconButton>
+                      <IconButton label={`Delete post ${i + 1}`} disabled={c.thread.length <= 1} onClick={() => setCards(c.thread.filter((x) => x.id !== t.id))}>
+                        <Trash2 size={14} />
+                      </IconButton>
+                    </span>
+                  </span>
+                }
+              />
+            ))
+          ) : (
+            <Tweet text={c.text} limit={limit} />
+          )}
+        </TweetFrame>
+      )}
 
-      {isThread && (
+      {editing && !isThread && (
+        <textarea
+          className="input text-[15px] leading-relaxed"
+          rows={Math.max(3, draft.split("\n").length + 1)}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          autoFocus
+          aria-label="Edit post"
+        />
+      )}
+
+      {editing && isThread && (
         <ol className="relative space-y-3 before:absolute before:left-[11px] before:top-3 before:bottom-3 before:w-px before:bg-line">
           {c.thread.map((t, i) => (
             <li key={t.id} className="relative pl-8 group/card">
