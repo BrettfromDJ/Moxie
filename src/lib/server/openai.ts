@@ -9,7 +9,7 @@ import { AppError, type Job } from "./claude";
 // shared with Claude; only the transport differs (Responses API + structured output).
 
 const env = process.env;
-export const DEFAULT_OPENAI_MODEL = "gpt-6-astra";
+export const DEFAULT_OPENAI_MODEL = "gpt-5.6-sol";
 
 export const openaiAvailable = () => !!env.OPENAI_API_KEY;
 

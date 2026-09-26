@@ -75,4 +75,4 @@ To try the whole UI without an API key, run `MOXIE_MOCK=1 npm run dev`. Every mo
 
 ## Configuration
 
-See `.env.example`. Only `ANTHROPIC_API_KEY` is required. Add `OPENAI_API_KEY` to also write with OpenAI models (default `gpt-6-astra`, change it with `MOXIE_OPENAI_MODEL`). Voice analysis, inspirations, critique, and the AI check always use Claude.
+See `.env.example`. Only `ANTHROPIC_API_KEY` is required. Add `OPENAI_API_KEY` to also write with OpenAI models (default `gpt-5.6-sol`, change it with `MOXIE_OPENAI_MODEL`). Voice analysis, inspirations, critique, and the AI check always use Claude.
