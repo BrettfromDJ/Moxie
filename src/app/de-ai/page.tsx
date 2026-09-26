@@ -3,7 +3,7 @@
 import { PageHeader } from "@/components/Shell";
 
 import { useMemo, useState } from "react";
-import { findAIPatterns } from "@/lib/checks";
+import { findSlop } from "@/lib/checks";
 import { activeProfile, api, useStore } from "@/lib/store";
 import type { DeAIResult } from "@/lib/types";
 
@@ -14,7 +14,7 @@ export default function DeAIPage() {
   const [result, setResult] = useState<DeAIResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const instant = useMemo(() => findAIPatterns(text), [text]);
+  const instant = useMemo(() => findSlop(text, activeProfile(state)), [text, state]);
   const voice = activeProfile(state);
 
   async function run() {

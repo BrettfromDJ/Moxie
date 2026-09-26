@@ -15,13 +15,13 @@ const outFormat = z.enum([
 
 export const CandidateSchema = z.object({
   angle: z.string().describe("Short name of the angle this candidate takes"),
-  structure: z.string().describe("The mechanic used, e.g. 'Setup → expectation → flip'"),
+  structure: z.string().describe("A few plain words on how the post is built, e.g. 'one specific moment, no conclusion'"),
   format: outFormat,
   text: z.string().describe("The full post. Empty string when format is thread."),
   thread: z
     .array(z.object({ role: cardRole, text: z.string() }))
     .describe("Thread posts in order. Empty array unless format is thread."),
-  rationale: z.string().describe("One sentence on why this version works"),
+  rationale: z.string().describe("One short, plain sentence on what this version does differently"),
   voiceMatch: z.enum(["strong", "partial", "weak"]),
   voiceNote: z.string().describe("One short phrase on how it matches or departs from the author's voice"),
 });

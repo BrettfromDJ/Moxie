@@ -1,4 +1,5 @@
 import { jsonError, structured } from "@/lib/server/claude";
+import { deslop } from "@/lib/server/deslop";
 import { mockAngles, mockCandidates } from "@/lib/server/mock";
 import { WRITER_SYSTEM, buildGenerate } from "@/lib/server/prompts";
 import { newId, normalizeContext, readJson, toCandidate } from "@/lib/server/request";
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       mock: () => mockCandidates(body),
     });
     const res: GenerateResponse = {
-      candidates: out.candidates.map(toCandidate),
+      candidates: await deslop(out.candidates.map(toCandidate), body),
       formatNote: out.formatNote || undefined,
       question: out.question,
     };

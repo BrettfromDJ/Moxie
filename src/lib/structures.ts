@@ -8,13 +8,12 @@ export const BUILT_IN_STRUCTURES: Structure[] = [
     name: "Observation → reversal",
     pattern: "Setup → expectation → flip",
     description:
-      "State something everyone accepts, let the reader settle into the expected conclusion, then flip it.",
+      "Describe something the reader recognizes, then show what you saw that didn't fit. Let the detail do the flipping; don't announce it.",
     steps: [
       "A plain observation the reader nods along to",
       "The conclusion they expect",
       "The flip: what is actually true",
     ],
-    example: "Everyone says hire slow. The best teams I've seen hire fast and fire the process, not the person.",
   },
   {
     id: "escalation",

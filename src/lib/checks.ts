@@ -10,17 +10,43 @@ export interface PatternHit {
 }
 
 const AI_PATTERNS: { re: RegExp; category: string; why: string }[] = [
+  // Contrast templates: the single most recognizable generated cadence.
   { re: /\bit'?s not (just )?(about )?[^.,;\n]{1,40}[,;—–-]+\s*it'?s\b/i, category: "Forced contrast", why: "“It's not X, it's Y” is the most recognizable AI cadence." },
-  { re: /\bnot (just )?[^.,;\n]{1,30}[,;—–-]+\s*but\b/i, category: "Forced contrast", why: "Setting up a strawman just to correct it reads templated." },
-  { re: /\b(in today'?s|in an ever[- ]changing|fast[- ]paced) (world|landscape|digital age)\b/i, category: "Filler opener", why: "Generic scene-setting that says nothing." },
-  { re: /\b(delve|tapestry|testament to|navigate the|realm of|unlock(ing)? the power|game[- ]changer|paradigm shift|leverage synerg)/i, category: "Cliché", why: "Vocabulary strongly associated with generated text." },
-  { re: /\b(let that sink in|read that again|this is huge|here'?s the thing|buckle up|a thread 🧵)\b/i, category: "Engagement bait", why: "Stock phrases that signal a template instead of a thought." },
-  { re: /\b(ultimately|in conclusion|at the end of the day|the bottom line is|all in all)\b/i, category: "Generic conclusion", why: "Wrap-up phrases that restate instead of adding." },
-  { re: /\b(truly|incredibly|absolutely|genuinely|deeply|profoundly) (important|powerful|transformative|valuable)\b/i, category: "Filler intensifier", why: "Intensifiers that inflate without adding meaning." },
+  { re: /\b(isn'?t|is not|aren'?t|wasn'?t|weren'?t) (just |really |actually )?(about )?[^.!?\n]{1,50}[.;]\s+(it'?s|they'?re|it was|that'?s)\b/i, category: "Forced contrast", why: "“X isn't Y. It's Z.” sets up a strawman just to knock it down." },
+  { re: /\bnot (just )?[^.,;\n]{1,30}[,;—–-]+\s*but\b/i, category: "Forced contrast", why: "“Not X, but Y” reads templated." },
+  { re: /\bnot because\b[^.\n]{1,60}\.\s+because\b/i, category: "Forced contrast", why: "“Not because X. Because Y.” is a stock construction." },
+  { re: /\b(everyone|most people|people) (thinks?|says?|believes?|assumes?)\b[^.\n]{0,80}[.\n]+\s*(but |they'?re wrong|it'?s not|it isn'?t|wrong\.|nope)/i, category: "Strawman setup", why: "“Everyone thinks X. They're wrong.” is a formula, not a thought." },
+  // Reveal and staccato rhythms.
+  { re: /(^|[.!\n]\s*)(the|my|your|our|here'?s the) (secret|answer|truth|problem|catch|kicker|trick|lesson|result|difference|twist|reason)\s*[?:]\s+\S/i, category: "Fake reveal", why: "“The secret? X.” manufactures suspense." },
+  { re: /(?:^|[.!?\n]\s*)(?:[A-Z][\w']*(?: [\w']+){0,2}[.!](?:\s+|$)){3,}/, category: "Staccato fragments", why: "Three-plus tiny sentences in a row (“Simple. Fast. Done.”) is a generated rhythm." },
+  { re: /\b(?:here'?s (?:why|what|how|the thing|the truth|the kicker|what i learned)|the truth is|the reality is|let'?s be honest|plot twist|real talk)\b|\b(?:spoiler(?: alert)?|unpopular opinion|hot take)\s*:/i, category: "Stock opener", why: "Throat-clearing that signals a template instead of a thought." },
+  { re: /\b(let that sink in|read that again|this is huge|buckle up|a thread 🧵|this changes everything|you'?re not ready|nobody is talking about)\b/i, category: "Engagement bait", why: "Stock phrases that beg for attention." },
+  { re: /(what do you think|thoughts\?|agree\?|who else\b[^?\n]*\?|am i wrong\?|drop (a|your)\b[^.\n]*below)\s*[?!.]*\s*$/i, category: "Engagement question", why: "A tacked-on question to farm replies." },
+  // Filler, clichés, wrap-ups.
+  { re: /\b(in today'?s|in an ever[- ]changing|fast[- ]paced|in a world where|in the age of) ?(world|landscape|digital age|economy)?\b/i, category: "Filler opener", why: "Generic scene-setting that says nothing." },
+  { re: /\b(delve|tapestry|testament to|navigate the|realm of|unlock(s|ing)?|game[- ]?changer|paradigm shift|leverag(e|ing)|synerg|resonat(e|es)|seamless(ly)?|elevate|harness|robust|pivotal|foster|landscape|embark|supercharge|empower|vibrant|intricate|underscore|showcase|streamline|journey|deep dive|double[- ]edged|north star|secret sauce|move the needle)\b/i, category: "Cliché", why: "Vocabulary strongly associated with generated text." },
+  { re: /\b(ultimately|in conclusion|at the end of the day|the bottom line is|all in all|in short|simply put|the takeaway)\b/i, category: "Generic conclusion", why: "Wrap-up phrases that restate instead of adding." },
+  { re: /\b(truly|incredibly|absolutely|genuinely|deeply|profoundly|quietly|remarkably) (important|powerful|transformative|valuable|underrated|brilliant|different)\b/i, category: "Filler intensifier", why: "Intensifiers that inflate without adding meaning." },
   { re: /\b(whether you'?re a|from [a-z]+ to [a-z]+, )/i, category: "Audience hedge", why: "Trying to address everyone addresses no one." },
   { re: /(?:^|\n)\s*(?:[-•]\s*)?[A-Z][^.\n]{0,40}:\s*[A-Z][^.\n]{0,40}\.\s*(?:\n|$)(?:\s*(?:[-•]\s*)?[A-Z][^.\n]{0,40}:\s*[A-Z][^.\n]{0,40}\.\s*(?:\n|$)){2,}/, category: "Template list", why: "Repeated “Label: phrase.” lines read machine-formatted." },
-  { re: /—.*—.*—/s, category: "Em dash overuse", why: "Three or more em dashes in a short post is a common tell." },
+  { re: /(?:^|\n)\s*(?:\p{Extended_Pictographic}|✅|👉|🔥|💡|🚀)\s/u, category: "Emoji bullets", why: "Emoji-as-bullet formatting is a content-farm tell." },
 ];
+
+// Em dashes are the loudest tell, so any em dash counts unless the author uses them.
+export function usesDashes(voice: VoiceProfile | null): boolean {
+  if (!voice) return false;
+  if (/dash/i.test(voice.writingHabits.punctuation) && !/(no|never|avoid|rarely)[^.]*dash/i.test(voice.writingHabits.punctuation)) return true;
+  return voice.samples.some((s) => s.text.includes("—"));
+}
+
+export function findSlop(text: string, voice: VoiceProfile | null): PatternHit[] {
+  const hits = findAIPatterns(text);
+  if (!usesDashes(voice)) {
+    const m = text.match(/[^.\n]{0,30}—[^.\n]{0,30}/);
+    if (m) hits.push({ category: "Em dash", quote: m[0].trim(), why: "Em dashes are the most common tell in generated text, and you don't use them." });
+  }
+  return hits;
+}
 
 export function findAIPatterns(text: string): PatternHit[] {
   const hits: PatternHit[] = [];
@@ -37,7 +63,7 @@ export interface RuleCheck {
   detail?: string;
 }
 
-function mentions(text: string, phrase: string): boolean {
+export function mentions(text: string, phrase: string): boolean {
   const p = phrase.trim().replace(/^["'“”]+|["'“”]+$/g, "");
   if (p.length < 3 || p.split(/\s+/).length > 6) return false; // only check literal, phrase-like rules
   return text.toLowerCase().includes(p.toLowerCase());
@@ -70,7 +96,7 @@ export function checkVoiceRules(
   if (hitRejected.length) {
     checks.push({ ok: false, label: "Rejected before", detail: hitRejected.join(", ") });
   }
-  const ai = findAIPatterns(text);
+  const ai = findSlop(text, voice);
   checks.push(
     ai.length
       ? { ok: false, label: "AI patterns", detail: ai.map((h) => h.category).join(", ") }

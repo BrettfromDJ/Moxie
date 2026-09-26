@@ -117,12 +117,12 @@ export const MODES: (Option<WritingMode> & { instruction: string })[] = [
 
 export function creativityInstruction(level: number): string {
   if (level <= 15)
-    return "Light cleanup only. Keep the author's wording and structure; fix clarity, rhythm, and typos.";
+    return "Light cleanup only. Keep the author's wording and structure; fix clarity, rhythm, and typos. Change as little as possible.";
   if (level <= 40)
-    return "Moderate edit. Keep the author's framing and most key phrases, tighten and sharpen the wording.";
+    return "Tighten. Keep the author's framing and most of their exact phrases; cut, reorder, and sharpen, but it should still read as their sentence.";
   if (level <= 70)
-    return "Rework freely. Keep the intended idea and facts, but feel free to restructure and reword.";
-  return "Substantial rethink. Explore new framings and structures for the same underlying idea. Never change the facts or the author's actual position.";
+    return "Rework. Keep the idea, the facts, and the author's best phrases; restructure freely. Don't swap their plain words for fancier ones.";
+  return "Rethink the framing. Try new angles and structures for the same idea, still in the author's plain voice. Never change the facts or their position.";
 }
 
 export function creativityLabel(level: number): string {
@@ -138,7 +138,7 @@ export const DEFAULT_SETTINGS: ComposerSettings = {
   length: "standard",
   angle: "auto",
   customAngle: "",
-  creativity: 50,
+  creativity: 35,
   options: 3,
   goal: "none",
   relationship: "none",

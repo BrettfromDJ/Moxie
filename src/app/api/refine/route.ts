@@ -1,4 +1,5 @@
 import { jsonError, structured } from "@/lib/server/claude";
+import { deslop } from "@/lib/server/deslop";
 import { mockRefine } from "@/lib/server/mock";
 import { WRITER_SYSTEM, buildRefine } from "@/lib/server/prompts";
 import { normalizeContext, readJson, toCandidate } from "@/lib/server/request";
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
         instruction: `This is still over the ${body.settings.charLimit}-character limit (measured: ${counts}). Cut further so every post is under ${body.settings.charLimit - 10} characters, keeping the point intact.`,
       });
     }
+    [result] = await deslop([result], body);
     return Response.json({
       candidate: { ...result, id: body.candidate.id },
       stillOver: overLimit(result, body.settings.charLimit),
