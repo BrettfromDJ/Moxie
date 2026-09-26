@@ -67,7 +67,7 @@ export default function VoicePage() {
   if (!hydrated) return null;
 
   return (
-    <div className="pb-32">
+    <div className="pb-16">
       <PageHeader
         title="Voice & taste"
         actions={

@@ -61,7 +61,7 @@ export default function StructuresPage() {
   const all = [...BUILT_IN_STRUCTURES, ...state.customStructures];
 
   return (
-    <div className="pb-32">
+    <div className="pb-16">
       <PageHeader title="Structures" />
       <div className="space-y-8 max-w-6xl mx-auto px-5 sm:px-10">
       <p className="text-sm text-muted max-w-2xl -mt-1">

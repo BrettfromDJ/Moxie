@@ -18,7 +18,7 @@ export default function LibraryPage() {
   const [tab, setTab] = useState<"saved" | "posted" | "signals">("saved");
 
   return (
-    <div className="pb-32">
+    <div className="pb-16">
       <PageHeader title="Library" />
       <div className="space-y-6 max-w-4xl mx-auto px-5 sm:px-10">
       <p className="text-sm text-muted max-w-2xl -mt-1">

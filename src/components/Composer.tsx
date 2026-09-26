@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  ArrowUp,
+  Check,
   ChevronDown,
-  CornerDownLeft,
   FileText,
+  Fingerprint,
   Image as ImageIcon,
   Layers,
   Link as LinkIcon,
@@ -11,16 +13,18 @@ import {
   PenLine,
   Plus,
   Shuffle,
+  SlidersHorizontal,
   Sparkles,
   Stethoscope,
 } from "lucide-react";
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { POST_TYPES } from "@/lib/options";
 import { type SendMode, activeSession, isResponding, patchActive, useStore } from "@/lib/store";
+import { findStructure } from "@/lib/structures";
 import { MenuItem, Popover } from "./Popover";
 import { RefChip, useReferenceActions } from "./References";
-import { settingsSummary, useSettings } from "./SettingsPanel";
-import { Logo } from "./Shell";
+import { SettingsPanel, settingsSummary, useSettings } from "./SettingsPanel";
 import { TagTextarea, unknownTags } from "./TagTextarea";
 
 export const SEND_MODES: Record<SendMode, { title: string; hint: string; icon: React.ReactNode }> = {
@@ -31,22 +35,23 @@ export const SEND_MODES: Record<SendMode, { title: string; hint: string; icon: R
   critique: { title: "Find the real thought", hint: "Diagnose what's weak before polishing, and get one useful question", icon: <Stethoscope size={16} /> },
 };
 
-// Fey-style command composer: a panel with a context chip and the message,
-// and a separate action bar below it.
+const pillBase = "items-center gap-1.5 rounded-full px-2.5 sm:px-3 h-9 text-sm text-muted whitespace-nowrap hover:bg-panel-3 hover:text-fg transition-colors";
+const pill = `inline-flex ${pillBase}`;
+
 export function Composer({
   onSend,
   busy,
   autoFocus,
-  compact,
+  menuSide = "top",
 }: {
   onSend: (mode: SendMode, text: string) => void;
   busy: boolean;
   autoFocus?: boolean;
-  compact?: boolean; // conversation view: hide the header row to save space
+  menuSide?: "top" | "bottom"; // "bottom" when the composer sits mid-screen
 }) {
   const { state, update } = useStore();
   const session = activeSession(state);
-  const { settings } = useSettings();
+  const { settings, set } = useSettings();
   const { addUrl, addText, addImage } = useReferenceActions();
   const responding = isResponding(settings);
   const hasTarget = session.references.some((r) => r.role === "target");
@@ -56,17 +61,20 @@ export function Composer({
   const mode = state.sendMode;
   const canSend = !busy && !loadingRefs && (!!text.trim() || hasReadyRef) && (mode !== "critique" || !!text.trim());
   const unknown = unknownTags(text, session.references);
+  const summary = settingsSummary(settings);
+  const structure = findStructure(settings.structureId, state.customStructures);
   const profile = state.profiles.find((p) => p.id === state.activeProfileId);
-  const postType = POST_TYPES.find((p) => p.value === settings.postType)!;
-  const summary = [postType.label, ...settingsSummary(settings), profile ? `Voice: ${profile.name}` : "No voice profile"].join(", ");
   const [source, setSource] = useState("");
 
   const setDraft = (draft: string) => update((s) => patchActive(s, (x) => ({ ...x, draft })));
   const appendTag = (tag: string) =>
-    update((s) => patchActive(s, (x) => ({ ...x, draft: `${x.draft}${x.draft && !/\s$/.test(x.draft) ? " " : ""}@${tag} ` })));
+    update((s) =>
+      patchActive(s, (x) => ({ ...x, draft: `${x.draft}${x.draft && !/\s$/.test(x.draft) ? " " : ""}@${tag} ` })),
+    );
 
   function send() {
-    if (canSend) onSend(mode, text.trim());
+    if (!canSend) return;
+    onSend(mode, text.trim());
   }
 
   function addSource() {
@@ -77,25 +85,14 @@ export function Composer({
     setSource("");
   }
 
-  return (
-    <div className="w-full space-y-2.5">
-      <div className="rounded-2xl border border-line bg-panel-2 shadow-[0_24px_70px_rgba(0,0,0,0.45)] focus-within:border-line-strong transition-colors">
-        {!compact && (
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-line">
-            <span className="inline-flex items-center gap-2 rounded-full bg-panel-3 pl-1.5 pr-3 py-1 text-xs font-semibold">
-              <span className="h-5 w-5 rounded-full bg-black grid place-items-center">
-                <Logo size={13} />
-              </span>
-              {postType.label}
-            </span>
-            <span className="ml-auto text-xs text-muted hidden sm:flex items-center gap-1.5">
-              {responding ? "Add the post, then your take" : "Type a thought and hit"} <span className="kbd">return</span>
-            </span>
-          </div>
-        )}
+  const postType = POST_TYPES.find((p) => p.value === settings.postType)!;
 
+  return (
+    <div className="w-full">
+      <div className="rounded-[24px] border border-line bg-panel-2 shadow-[0_24px_70px_rgba(0,0,0,0.45)] focus-within:border-line-strong transition-colors">
+        {/* Sources attached to this conversation */}
         {(session.references.length > 0 || (responding && !hasTarget)) && (
-          <div className="flex flex-wrap gap-2 px-5 pt-4">
+          <div className="flex flex-wrap gap-2 px-4 pt-3.5">
             {session.references.map((r) => (
               <RefChip key={r.id} reference={r} />
             ))}
@@ -123,7 +120,7 @@ export function Composer({
           </div>
         )}
 
-        <div className={`px-5 ${compact ? "py-3" : "pt-4 pb-6"}`}>
+        <div className="px-5 pt-3">
           <TagTextarea
             ariaLabel="Message"
             autoFocus={autoFocus}
@@ -132,73 +129,49 @@ export function Composer({
             references={session.references}
             onPasteUrl={(url) => addUrl(url)}
             onSubmit={send}
-            minRows={compact ? 1 : 2}
+            minRows={1}
             placeholder={
               responding
-                ? "Your take (optional). Leave blank to see angles."
-                : compact
-                  ? "Follow up, or start a new thought…"
-                  : "A rough thought, a draft, or paste a link…"
+                ? "Your take (optional). Leave blank to see angles, or jot a rough thought."
+                : "A rough thought, a draft, or paste a link…"
             }
           />
         </div>
-      </div>
 
-      {/* Action bar */}
-      <div className="flex items-center gap-2 h-14 rounded-2xl border border-line bg-panel-2 pl-2 pr-2 shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
-        <AttachMenu
-          onLink={(u) => appendTag(addUrl(u))}
-          onText={(t) => appendTag(addText(t))}
-          onImage={async (f) => {
-            const tag = await addImage(f);
-            if (tag) appendTag(tag);
-          }}
-        />
-        <p className="flex-1 min-w-0 truncate text-sm text-faint" title={summary}>
-          {unknown.length > 0 ? (
-            <span className="text-warn">
-              {unknown.map((t) => `@${t}`).join(", ")} {unknown.length === 1 ? "isn't a source" : "aren't sources"}; sent as a mention
-            </span>
-          ) : (
-            summary
-          )}
-        </p>
-        <div className="flex items-stretch h-10 rounded-xl border border-line bg-panel-3/60">
-          <button
-            type="button"
-            onClick={send}
-            disabled={!canSend}
-            className="flex items-center gap-2 pl-3.5 pr-3 text-sm font-medium disabled:text-faint rounded-l-xl hover:bg-panel-3 disabled:hover:bg-transparent"
-            aria-label={SEND_MODES[mode].title}
-            data-testid="send"
-          >
-            {busy || loadingRefs ? <LoaderCircle size={16} className="animate-spin" /> : SEND_MODES[mode].icon}
-            <span className="hidden sm:inline">{loadingRefs ? "Reading links…" : SEND_MODES[mode].title}</span>
-            <CornerDownLeft size={14} className="text-muted" />
-          </button>
+        {/* Toolbar */}
+        <div className="flex items-center gap-1 px-2 pb-2 pt-1">
+          <AttachMenu
+            side={menuSide}
+            onLink={(u) => appendTag(addUrl(u))}
+            onText={(t) => appendTag(addText(t))}
+            onImage={async (f) => {
+              const tag = await addImage(f);
+              if (tag) appendTag(tag);
+            }}
+          />
+
           <Popover
-            label="What send does"
-            align="end"
-            side="top"
-            panelClassName="w-80 p-1.5"
-            className="flex"
+            side={menuSide}
+            label="Post type"
+            panelClassName="w-72 p-1.5"
             trigger={() => (
-              <span className="flex items-center px-2 border-l border-line text-muted hover:text-fg hover:bg-panel-3 rounded-r-xl cursor-pointer" data-testid="send-mode">
-                <ChevronDown size={15} />
+              <span className={pill} data-testid="post-type">
+                {postType.label}
+                <ChevronDown size={14} />
               </span>
             )}
           >
             {(close) => (
               <div role="menu">
-                {(Object.keys(SEND_MODES) as SendMode[]).map((m) => (
+                {POST_TYPES.map((p) => (
                   <MenuItem
-                    key={m}
-                    icon={SEND_MODES[m].icon}
-                    title={SEND_MODES[m].title}
-                    hint={SEND_MODES[m].hint}
-                    active={m === mode}
+                    key={p.value}
+                    title={p.label}
+                    hint={p.hint}
+                    active={p.value === settings.postType}
+                    icon={p.value === settings.postType ? <Check size={16} /> : <span className="inline-block w-4" />}
                     onClick={() => {
-                      update((s) => ({ ...s, sendMode: m }));
+                      set({ postType: p.value });
                       close();
                     }}
                   />
@@ -206,17 +179,139 @@ export function Composer({
               </div>
             )}
           </Popover>
+
+          <Popover
+            side={menuSide}
+            label="Settings"
+            panelClassName="w-[min(26rem,calc(100vw-2rem))]"
+            trigger={() => (
+              <span className={pill}>
+                <SlidersHorizontal size={15} />
+                <span className="hidden sm:inline">{summary.length ? summary.slice(0, 2).join(" · ") : "Settings"}</span>
+                {summary.length > 2 && <span className="text-xs">+{summary.length - 2}</span>}
+              </span>
+            )}
+          >
+            {() => <SettingsPanel />}
+          </Popover>
+
+          <Popover
+            side={menuSide}
+            label="Voice"
+            panelClassName="w-64 p-1.5"
+            trigger={() => (
+              <span className={`hidden sm:inline-flex ${pillBase}`}>
+                <Fingerprint size={15} />
+                {profile?.name ?? "No voice"}
+              </span>
+            )}
+          >
+            {(close) => (
+              <div role="menu">
+                {state.profiles.map((p) => (
+                  <MenuItem
+                    key={p.id}
+                    title={p.name}
+                    hint={p.archetype || undefined}
+                    active={p.id === state.activeProfileId}
+                    icon={p.id === state.activeProfileId ? <Check size={16} /> : <span className="inline-block w-4" />}
+                    onClick={() => {
+                      update((s) => ({ ...s, activeProfileId: p.id }));
+                      close();
+                    }}
+                  />
+                ))}
+                <MenuItem
+                  title="No voice profile"
+                  hint="Plain, natural register"
+                  active={!state.activeProfileId}
+                  icon={!state.activeProfileId ? <Check size={16} /> : <span className="inline-block w-4" />}
+                  onClick={() => {
+                    update((s) => ({ ...s, activeProfileId: null }));
+                    close();
+                  }}
+                />
+                <Link href="/voice" className="block px-3 py-2 text-sm text-fg hover:bg-panel-3 rounded-xl">
+                  {state.profiles.length ? "Manage voices →" : "Teach it your voice →"}
+                </Link>
+              </div>
+            )}
+          </Popover>
+
+          <div className="ml-auto flex items-center gap-1">
+            <Popover
+              side={menuSide}
+              label="What send does"
+              align="end"
+              panelClassName="w-80 p-1.5"
+              trigger={() => (
+                <span className={pill} data-testid="send-mode">
+                  {SEND_MODES[mode].icon}
+                  <span className="hidden sm:inline">{SEND_MODES[mode].title}</span>
+                  <ChevronDown size={14} />
+                </span>
+              )}
+            >
+              {(close) => (
+                <div role="menu">
+                  {(Object.keys(SEND_MODES) as SendMode[]).map((m) => (
+                    <MenuItem
+                      key={m}
+                      icon={SEND_MODES[m].icon}
+                      title={SEND_MODES[m].title}
+                      hint={SEND_MODES[m].hint}
+                      active={m === mode}
+                      onClick={() => {
+                        update((s) => ({ ...s, sendMode: m }));
+                        close();
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </Popover>
+            <button
+              type="button"
+              onClick={send}
+              disabled={!canSend}
+              aria-label={SEND_MODES[mode].title}
+              title={loadingRefs ? "Reading links…" : SEND_MODES[mode].title}
+              className="h-9 w-9 rounded-full bg-fg text-bg grid place-items-center hover:bg-white disabled:opacity-25 transition-opacity"
+            >
+              {busy || loadingRefs ? <LoaderCircle size={18} className="animate-spin" /> : <ArrowUp size={18} />}
+            </button>
+          </div>
         </div>
       </div>
+
+      {(unknown.length > 0 || structure) && (
+        <p className="text-xs text-muted mt-2.5 px-4 space-x-3">
+          {unknown.length > 0 && (
+            <span className="text-warn">
+              {unknown.map((t) => `@${t}`).join(", ")} {unknown.length === 1 ? "isn't a source" : "aren't sources"}; sent as a normal mention.
+            </span>
+          )}
+          {structure && (
+            <span>
+              Structure: <span className="text-fg">{structure.name}</span>{" "}
+              <button type="button" className="underline underline-offset-2 decoration-line-strong" onClick={() => set({ structureId: null })}>
+                remove
+              </button>
+            </span>
+          )}
+        </p>
+      )}
     </div>
   );
 }
 
 function AttachMenu({
+  side,
   onLink,
   onText,
   onImage,
 }: {
+  side: "top" | "bottom";
   onLink: (url: string) => void;
   onText: (text: string) => void;
   onImage: (file: File) => void;
@@ -240,16 +335,12 @@ function AttachMenu({
         }}
       />
       <Popover
-        side="top"
+        side={side}
         label="Add a source"
         panelClassName="w-80 p-1.5"
         trigger={() => (
-          <span
-            className="h-10 w-10 grid place-items-center rounded-xl text-muted hover:bg-panel-3 hover:text-fg"
-            title="Add a source"
-            onClick={() => setView("menu")}
-          >
-            <Plus size={19} />
+          <span className="h-9 w-9 rounded-full grid place-items-center text-muted hover:bg-panel-3 hover:text-fg" onClick={() => setView("menu")}>
+            <Plus size={20} />
           </span>
         )}
       >
@@ -267,7 +358,7 @@ function AttachMenu({
                   file.current?.click();
                 }}
               />
-              <p className="px-3 py-2 text-xs text-muted">Tip: paste a link straight into the message, and type @ to refer to a source.</p>
+              <p className="px-3 py-2 text-xs text-muted">Tip: paste a link straight into the message box, and type @ to refer to a source.</p>
             </div>
           ) : (
             <form

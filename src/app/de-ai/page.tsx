@@ -36,7 +36,7 @@ export default function DeAIPage() {
   }
 
   return (
-    <div className="pb-32">
+    <div className="pb-16">
       <PageHeader title="De-AI checker" />
       <div className="max-w-3xl mx-auto px-5 sm:px-10 space-y-6">
       <p className="text-sm text-muted max-w-2xl -mt-1">

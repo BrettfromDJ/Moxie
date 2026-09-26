@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { POST_TYPES } from "@/lib/options";
 import { type SendMode, activeSession, patchActive, startSession, useStore } from "@/lib/store";
-import { Logo } from "./Shell";
+import { Logo } from "./Logo";
 
 interface Item {
   id: string;

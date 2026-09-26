@@ -1,14 +1,13 @@
 "use client";
 
-import { ArrowUpRight, AtSign, Fingerprint, History, Layers, Megaphone, MessageCircle, PenLine, Quote, RefreshCw, Shuffle, SquarePen } from "lucide-react";
+import { ArrowUpRight, AtSign, Fingerprint, Layers, Megaphone, MessageCircle, PenLine, Quote, RefreshCw, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { CandidateCard } from "@/components/CandidateCard";
 import { Composer } from "@/components/Composer";
 import { CritiquePanel } from "@/components/CritiquePanel";
-import { FilterBar } from "@/components/FilterBar";
 import { useSettings } from "@/components/SettingsPanel";
-import { IconSquare, Logo, PageHeader, useCommandPalette } from "@/components/Shell";
+import { Logo } from "@/components/Logo";
 import {
   type AssistantTurn,
   type RunRequest,
@@ -19,7 +18,6 @@ import {
   buildContext,
   patchActive,
   patchSession,
-  startSession,
   uid,
   useStore,
 } from "@/lib/store";
@@ -44,7 +42,6 @@ export default function WritePage() {
   const empty = session.turns.length === 0;
   const busy = session.turns.some((t) => t.role === "assistant" && t.status === "pending");
   const endRef = useRef<HTMLDivElement>(null);
-  const palette = useCommandPalette();
 
   useEffect(() => {
     if (!empty) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -128,49 +125,27 @@ export default function WritePage() {
 
   if (!hydrated) return null;
 
-  const header = (
-    <PageHeader
-      title="Write"
-      actions={
-        <>
-          <IconSquare label="Recent drafts" onClick={() => palette.open("")}>
-            <History size={17} />
-          </IconSquare>
-          <IconSquare label="New draft" onClick={() => update(startSession)}>
-            <SquarePen size={17} />
-          </IconSquare>
-        </>
-      }
-    >
-      <FilterBar />
-    </PageHeader>
-  );
-
   if (empty) {
     return (
-      <div className="min-h-full flex flex-col">
-        {header}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 pt-6 pb-36">
-          <h2 className="title-gradient text-4xl sm:text-[3.25rem] leading-tight font-semibold tracking-tight text-center">
-            What are you thinking about?
-          </h2>
-          <p className="mt-4 text-center text-muted max-w-md leading-relaxed">
-            Drop in a rough thought, a draft, or a link. Moxie finds the angle and writes it in your voice. Jump anywhere with{" "}
-            <span className="kbd">⌘</span> <span className="kbd">K</span>
-          </p>
-          <div className="w-full max-w-[680px] mt-10">
-            <Composer autoFocus busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
-            <Starters />
-            {state.profiles.length === 0 && (
-              <p className="mt-6 text-center text-sm text-muted">
-                <Fingerprint size={14} className="inline -mt-0.5 mr-1" />
-                Drafts sound generic until it knows you.{" "}
-                <Link href="/voice" className="text-fg font-medium underline underline-offset-4 decoration-line-strong">
-                  Teach it your voice
-                </Link>
-              </p>
-            )}
-          </div>
+      <div className="min-h-full flex flex-col items-center justify-center px-4 pt-8 pb-[12vh]">
+        <h1 className="title-gradient text-4xl sm:text-[3.25rem] leading-tight font-semibold tracking-tight text-center">
+          What are you thinking about?
+        </h1>
+        <p className="mt-4 text-center text-muted max-w-md leading-relaxed">
+          Drop in a rough thought, a draft, or a link. Moxie finds the angle and writes it in your voice.
+        </p>
+        <div className="w-full max-w-3xl mt-10">
+          <Composer autoFocus menuSide="bottom" busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
+          <Starters />
+          {state.profiles.length === 0 && (
+            <p className="mt-6 text-center text-sm text-muted">
+              <Fingerprint size={14} className="inline -mt-0.5 mr-1" />
+              Drafts sound generic until it knows you.{" "}
+              <Link href="/voice" className="text-fg font-medium underline underline-offset-4 decoration-line-strong">
+                Teach it your voice
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     );
@@ -178,8 +153,7 @@ export default function WritePage() {
 
   return (
     <div className="min-h-full flex flex-col">
-      <div className="sticky top-0 z-20 bg-bg/85 backdrop-blur-xl">{header}</div>
-      <div className="flex-1 w-full max-w-[760px] mx-auto px-4 pt-4 pb-10 space-y-10">
+      <div className="flex-1 w-full max-w-3xl mx-auto px-4 pt-8 pb-10 space-y-10">
         {session.turns.map((t) =>
           t.role === "user" ? (
             <UserBubble key={t.id} turn={t} />
@@ -204,9 +178,10 @@ export default function WritePage() {
         )}
         <div ref={endRef} />
       </div>
-      <div className="sticky bottom-0 z-10 px-4 pt-12 pb-[92px] bg-gradient-to-t from-bg from-80% to-transparent">
-        <div className="max-w-[680px] mx-auto">
-          <Composer compact busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
+      <div className="sticky bottom-0 z-10 px-4 pt-10 pb-4 bg-gradient-to-t from-bg from-70% to-transparent">
+        <div className="max-w-3xl mx-auto">
+          <Composer busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
+          <p className="text-center text-[11px] text-faint mt-2.5">Moxie can get things wrong. Check facts before you post.</p>
         </div>
       </div>
     </div>
