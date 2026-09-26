@@ -5,17 +5,18 @@ import { useState } from "react";
 import { activeProfile, type Identity, useStore } from "@/lib/store";
 import { X_LIMIT, splitAtLimit, xLength } from "@/lib/xcount";
 
-// Renders drafts the way they'll look on X (dark mode), so you can see how
+// Renders drafts laid out the way they'll look on X, so you can see how
 // lines wrap and stack, where a long post gets "Show more", and what spills
 // past the character limit.
 
+// Uses Moxie's own surfaces so previews blend into the app; only X's link blue is kept.
 const X = {
-  bg: "#000000",
-  border: "#2f3336",
-  text: "#e7e9ea",
-  muted: "#71767b",
-  link: "#1d9bf0",
-  overflowBg: "rgba(244, 33, 46, 0.28)",
+  bg: "var(--panel-2)",
+  border: "var(--line)",
+  text: "var(--fg)",
+  muted: "var(--muted)",
+  link: "#4a9ff0",
+  overflowBg: "rgba(242, 90, 95, 0.22)",
 };
 const X_FONT = `"Chirp", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
 const TOKEN_RE = /(https?:\/\/[^\s]+|@\w{1,15}|#\w+|\[[^\]\n]{1,80}\])/g;

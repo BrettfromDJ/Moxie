@@ -185,7 +185,7 @@ export function CandidateCard({
                 connectAbove={i > 0}
                 connectBelow={i < c.thread.length - 1}
                 trailing={
-                  <span className="flex items-center gap-0.5 text-[#71767b]">
+                  <span className="flex items-center gap-0.5 text-muted">
                     <span className="text-[11px] uppercase tracking-wide px-1.5">{t.role}</span>
                     <span className="flex">
                       <IconButton label={`Move post ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>
