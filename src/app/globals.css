@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f7f7f5;
+  --panel: #ffffff;
+  --panel-2: #f1f1ee;
+  --line: #e4e4df;
+  --fg: #1a1a18;
+  --muted: #6b6b64;
+  --accent: #4f46e5;
+  --accent-soft: #eef0ff;
+  --accent-fg: #ffffff;
+  --good: #15803d;
+  --warn: #b45309;
+  --bad: #b91c1c;
+  --chip: #e0e7ff;
+  --chip-fg: #3730a3;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111110;
+    --panel: #1a1a19;
+    --panel-2: #232321;
+    --line: #2f2f2c;
+    --fg: #ececea;
+    --muted: #9a9a92;
+    --accent: #818cf8;
+    --accent-soft: #23244a;
+    --accent-fg: #0b0b1a;
+    --good: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --chip: #312e81;
+    --chip-fg: #c7d2fe;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-chip: var(--chip);
+  --color-chip-fg: var(--chip-fg);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+@layer components {
+/* Shared form controls */
+.input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  white-space: nowrap;
+  transition: background 120ms, border-color 120ms, opacity 120ms;
+}
+.btn:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent);
+  opacity: 0.9;
+}
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+}
+
+}
+
+/* Composer: a transparent textarea over a highlighted backdrop so @tags render as chips. */
+.composer-layer {
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  padding: 0.9rem 1rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  letter-spacing: normal;
+}
+.composer-backdrop mark {
+  background: var(--chip);
+  color: transparent;
+  border-radius: 0.3rem;
+  box-shadow: 0 0 0 2px var(--chip);
+}
+.composer-backdrop mark.unknown {
+  background: transparent;
+  box-shadow: none;
+  text-decoration: underline wavy var(--warn);
+  text-underline-offset: 4px;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
