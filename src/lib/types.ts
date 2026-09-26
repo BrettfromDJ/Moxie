@@ -51,6 +51,7 @@ export interface ComposerSettings {
   mode: WritingMode;
   structureId: string | null;
   charLimit: number; // 280 standard, 25000 premium
+  provider: "anthropic" | "openai";
 }
 
 // ---------- References ----------
@@ -262,6 +263,7 @@ export interface GenerateRequest extends GenerationContext {
 }
 
 export interface GenerateResponse {
+  model?: string; // human-readable name of the model that wrote this
   angles?: AngleOption[];
   candidates?: Candidate[];
   formatNote?: string;

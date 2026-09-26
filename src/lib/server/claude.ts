@@ -43,6 +43,18 @@ export class AppError extends Error {
 
 export const isMock = () => env.MOXIE_MOCK === "1";
 
+export function modelLabel(provider: Provider | undefined, model: string): string {
+  if (provider === "openai") {
+    const m = model.match(/^gpt-([\d.]+)(.*)$/i);
+    if (!m) return model;
+    return `GPT-${m[1]}${m[2].replace(/-(\w)/g, (_, c: string) => ` ${c.toUpperCase()}`)}`;
+  }
+  const m = model.match(/^claude-(\w+)-(\d+)(?:-(\d+))?/);
+  return m ? `Claude ${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}${m[3] ? `.${m[3]}` : ""}` : model;
+}
+
+export const claudeModel = (job: Job) => JOBS[job].model;
+
 let client: Anthropic | null = null;
 function getClient(): Anthropic {
   client ??= new Anthropic();
@@ -54,16 +66,24 @@ function supportsDefaultFallbacks(model: string): boolean {
   return /^claude-(opus-5|fable-5)/.test(model);
 }
 
+export type Provider = "anthropic" | "openai";
+
 export async function structured<S extends z.ZodType>(opts: {
   job: Job;
   system: string;
   content: Anthropic.Beta.BetaContentBlockParam[];
   schema: S;
   mock: () => z.infer<S>;
+  provider?: Provider;
 }): Promise<z.infer<S>> {
   if (isMock()) {
     await new Promise((r) => setTimeout(r, 400));
     return opts.mock();
+  }
+  if (opts.provider === "openai") {
+    // Loaded lazily so Claude-only setups never touch the OpenAI SDK.
+    const { openaiStructured } = await import("./openai");
+    return openaiStructured(opts);
   }
   const job = JOBS[opts.job];
   const fallbacks = supportsDefaultFallbacks(job.model);

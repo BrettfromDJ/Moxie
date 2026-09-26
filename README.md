@@ -24,6 +24,7 @@ To try the whole UI without an API key, run `MOXIE_MOCK=1 npm run dev`. Every mo
   - **Post type**: original, quote, reply, announcement, link, image, or remix.
   - **Settings**: a Midjourney-style panel of pill options for format, length, number of options, creativity, angle, reply relationship, goal, style, and X Premium limits.
   - **Voice**: pick which voice profile to write in, and switch the writers you learn from on or off.
+  - **Model** (appears when `OPENAI_API_KEY` is set): write with Claude or an OpenAI model. Each result says which model wrote it, so you can compare.
   - **Send mode** (next to the send button): **Find angles** (the default), **Write drafts**, **Surprise me**, **Explore formats**, **Find the real thought** (a critique of your draft), or **Check for AI writing** (paste any post to get flags and a cleaner version).
 - Results appear as a conversation. Angles show as a numbered table, like a stock screener; click one to get drafts. Button actions ("More like #2", "Push #1 further", "Fresh set", "5 different directions", "Try other formats") show up as small bubbles in the conversation. Follow-up messages keep the earlier context.
 - Each draft card shows the text, one line of facts (X character count, reading time, a voice-match estimate, and any problems), and an icon row: copy, edit, more like this, never like this, push further, and Fit to X. Less common actions sit in a "…" menu: ask for a change, shorten, De-AI, strengthen the hook or opening, improve pacing, save, and "I posted this".
@@ -74,4 +75,4 @@ To try the whole UI without an API key, run `MOXIE_MOCK=1 npm run dev`. Every mo
 
 ## Configuration
 
-See `.env.example`. Only `ANTHROPIC_API_KEY` is required.
+See `.env.example`. Only `ANTHROPIC_API_KEY` is required. Add `OPENAI_API_KEY` to also write with OpenAI models (default `gpt-6-astra`, change it with `MOXIE_OPENAI_MODEL`). Voice analysis, inspirations, critique, and the AI check always use Claude.

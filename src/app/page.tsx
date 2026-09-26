@@ -120,9 +120,11 @@ export default function WritePage() {
         candidates: res.candidates,
         formatNote: res.formatNote,
         question: res.question,
-        label: res.angles
-          ? `${res.angles.length} angles`
-          : `${n} draft${n === 1 ? "" : "s"}${req.angle ? ` · ${req.angle.title}` : req.mode === "formats" ? " · four formats" : ""}`,
+        label:
+          (res.angles
+            ? `${res.angles.length} angles`
+            : `${n} draft${n === 1 ? "" : "s"}${req.angle ? ` · ${req.angle.title}` : req.mode === "formats" ? " · four formats" : ""}`) +
+          (res.model ? ` · ${res.model}` : ""),
       });
     } catch (e) {
       finish({ status: "error", error: (e as Error).message });

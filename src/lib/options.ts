@@ -145,6 +145,7 @@ export const DEFAULT_SETTINGS: ComposerSettings = {
   mode: "balanced",
   structureId: null,
   charLimit: X_LIMIT,
+  provider: "anthropic",
 };
 
 export function labelFor<T extends string>(list: Option<T>[], value: T): string {

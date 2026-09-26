@@ -1,4 +1,4 @@
-import { jsonError, structured } from "@/lib/server/claude";
+import { claudeModel, jsonError, modelLabel, structured } from "@/lib/server/claude";
 import { deslop } from "@/lib/server/deslop";
 import { mockAngles, mockCandidates } from "@/lib/server/mock";
 import { WRITER_SYSTEM, buildGenerate } from "@/lib/server/prompts";
@@ -18,6 +18,8 @@ export async function POST(request: Request) {
       return Response.json({ error: "A seed candidate is required." }, { status: 400 });
     }
     const content = buildGenerate(body);
+    const provider = body.settings.provider === "openai" ? "openai" : "anthropic";
+    const model = modelLabel(provider, provider === "openai" ? (await import("@/lib/server/openai")).openaiModel("write") : claudeModel("write"));
 
     if (body.mode === "angles") {
       const out = await structured({
@@ -26,10 +28,12 @@ export async function POST(request: Request) {
         content,
         schema: AnglesSchema,
         mock: mockAngles,
+        provider,
       });
       const res: GenerateResponse = {
         angles: out.angles.map((a) => ({ id: newId("a"), ...a })),
         question: out.question,
+        model,
       };
       return Response.json(res);
     }
@@ -40,11 +44,13 @@ export async function POST(request: Request) {
       content,
       schema: CandidatesSchema,
       mock: () => mockCandidates(body),
+      provider,
     });
     const res: GenerateResponse = {
       candidates: await deslop(out.candidates.map(toCandidate), body),
       formatNote: out.formatNote || undefined,
       question: out.question,
+      model,
     };
     return Response.json(res);
   } catch (error) {

@@ -66,6 +66,7 @@ export async function deslop(candidates: Candidate[], ctx: GenerationContext): P
       job: "write",
       system: WRITER_SYSTEM,
       schema: RewritesSchema,
+      provider: ctx.settings.provider,
       mock: () => ({
         rewrites: flagged.map(({ c, index }) => ({
           index,

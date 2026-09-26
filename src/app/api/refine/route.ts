@@ -31,6 +31,7 @@ export async function POST(request: Request) {
             system: WRITER_SYSTEM,
             content: buildRefine(req),
             schema: RefinedSchema,
+            provider: req.settings.provider,
             mock: () => ({ candidate: mockRefine(req.candidate, req.action) }),
           })
         ).candidate,

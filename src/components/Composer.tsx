@@ -23,6 +23,7 @@ import { useRef, useState } from "react";
 import { POST_TYPES } from "@/lib/options";
 import { type SendMode, activeSession, isResponding, patchActive, useStore } from "@/lib/store";
 import { findStructure } from "@/lib/structures";
+import { ModelPicker } from "./ModelPicker";
 import { MenuItem, Popover } from "./Popover";
 import { RefChip, useReferenceActions } from "./References";
 import { SettingsPanel, settingsSummary, useSettings } from "./SettingsPanel";
@@ -272,6 +273,8 @@ export function Composer({
               </div>
             )}
           </Popover>
+
+          <ModelPicker side={menuSide} pillClass={pill} />
 
           <div className="ml-auto flex items-center gap-1">
             <Popover
