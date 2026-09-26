@@ -56,7 +56,7 @@ export function Popover({
           aria-label={label}
           className={`absolute z-40 ${side === "top" ? "bottom-full mb-2" : "top-full mt-2"} ${
             align === "start" ? "left-0" : "right-0"
-          } rounded-2xl border border-line bg-panel shadow-xl shadow-black/10 ${panelClassName}`}
+          } rounded-2xl border border-line bg-panel-2 shadow-[0_24px_60px_rgba(0,0,0,0.55)] ${panelClassName}`}
         >
           {children(() => setOpen(false))}
         </div>
@@ -86,8 +86,8 @@ export function MenuItem({
       role="menuitem"
       disabled={disabled}
       onClick={onClick}
-      className={`w-full flex items-start gap-3 rounded-xl px-3 py-2 text-left hover:bg-panel-2 disabled:opacity-40 ${
-        active ? "bg-panel-2" : ""
+      className={`w-full flex items-start gap-3 rounded-xl px-3 py-2 text-left hover:bg-panel-3 disabled:opacity-40 ${
+        active ? "bg-panel-3" : ""
       }`}
     >
       {icon && <span className="mt-0.5 text-muted shrink-0">{icon}</span>}

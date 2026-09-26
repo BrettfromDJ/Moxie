@@ -1,5 +1,8 @@
 "use client";
 
+import { Search } from "lucide-react";
+import { PageHeader, SectionTitle } from "@/components/Shell";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { activeSession, api, patchActive, startSession, uid, useStore } from "@/lib/store";
@@ -58,16 +61,15 @@ export default function StructuresPage() {
   const all = [...BUILT_IN_STRUCTURES, ...state.customStructures];
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto px-4 sm:px-8 py-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Writing structures</h1>
-        <p className="text-sm text-muted max-w-2xl">
+    <div className="pb-32">
+      <PageHeader title="Structures" />
+      <div className="space-y-8 max-w-6xl mx-auto px-5 sm:px-10">
+      <p className="text-sm text-muted max-w-2xl -mt-1">
           Reusable mechanics, not copies of successful posts. Pick one to apply to your own idea, or paste a post you admire to see how it works.
-        </p>
-      </header>
+      </p>
 
       <section className="card p-5 space-y-3 max-w-3xl">
-        <h2 className="font-semibold">Break down a post I admire</h2>
+        <SectionTitle tone="purple" icon={<Search size={17} />}>Break down a post I admire</SectionTitle>
         <textarea
           className="input"
           rows={4}
@@ -155,6 +157,7 @@ export default function StructuresPage() {
           </article>
         ))}
       </section>
+      </div>
     </div>
   );
 }

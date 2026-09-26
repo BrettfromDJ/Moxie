@@ -57,7 +57,7 @@ export function SettingsPanel() {
   const structures = [...BUILT_IN_STRUCTURES, ...state.customStructures];
 
   return (
-    <div className="space-y-4 max-h-[min(34rem,42vh)] overflow-y-auto p-4">
+    <div className="space-y-4 max-h-[min(34rem,65vh)] overflow-y-auto p-4">
       <Pills label="Format" value={s.format} options={FORMATS} onChange={(format) => set({ format })} />
       <div className="grid grid-cols-2 gap-4">
         <Pills label="Length" value={s.length} options={LENGTHS} onChange={(length) => set({ length })} />

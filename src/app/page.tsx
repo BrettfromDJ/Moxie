@@ -1,12 +1,14 @@
 "use client";
 
-import { AtSign, Fingerprint, Layers, Megaphone, MessageCircle, PenLine, Quote, RefreshCw, Shuffle, Sparkles } from "lucide-react";
+import { ArrowUpRight, AtSign, Fingerprint, History, Layers, Megaphone, MessageCircle, PenLine, Quote, RefreshCw, Shuffle, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { CandidateCard } from "@/components/CandidateCard";
-import { Composer, SEND_MODES } from "@/components/Composer";
+import { Composer } from "@/components/Composer";
 import { CritiquePanel } from "@/components/CritiquePanel";
+import { FilterBar } from "@/components/FilterBar";
 import { useSettings } from "@/components/SettingsPanel";
+import { IconSquare, Logo, PageHeader, useCommandPalette } from "@/components/Shell";
 import {
   type AssistantTurn,
   type RunRequest,
@@ -17,6 +19,7 @@ import {
   buildContext,
   patchActive,
   patchSession,
+  startSession,
   uid,
   useStore,
 } from "@/lib/store";
@@ -41,6 +44,7 @@ export default function WritePage() {
   const empty = session.turns.length === 0;
   const busy = session.turns.some((t) => t.role === "assistant" && t.status === "pending");
   const endRef = useRef<HTMLDivElement>(null);
+  const palette = useCommandPalette();
 
   useEffect(() => {
     if (!empty) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -124,22 +128,49 @@ export default function WritePage() {
 
   if (!hydrated) return null;
 
+  const header = (
+    <PageHeader
+      title="Write"
+      actions={
+        <>
+          <IconSquare label="Recent drafts" onClick={() => palette.open("")}>
+            <History size={17} />
+          </IconSquare>
+          <IconSquare label="New draft" onClick={() => update(startSession)}>
+            <SquarePen size={17} />
+          </IconSquare>
+        </>
+      }
+    >
+      <FilterBar />
+    </PageHeader>
+  );
+
   if (empty) {
     return (
-      <div className="min-h-full flex flex-col items-center justify-center px-4 pb-[12vh]">
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-center mb-8">What are you thinking about?</h1>
-        <div className="w-full max-w-3xl">
-          <Composer autoFocus menuSide="bottom" busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
-          <Starters />
-          {state.profiles.length === 0 && (
-            <p className="mt-6 text-center text-sm text-muted">
-              <Fingerprint size={14} className="inline -mt-0.5 mr-1" />
-              Drafts sound generic until it knows you.{" "}
-              <Link href="/voice" className="text-accent font-medium">
-                Teach it your voice
-              </Link>
-            </p>
-          )}
+      <div className="min-h-full flex flex-col">
+        {header}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 pt-6 pb-36">
+          <h2 className="title-gradient text-4xl sm:text-[3.25rem] leading-tight font-semibold tracking-tight text-center">
+            What are you thinking about?
+          </h2>
+          <p className="mt-4 text-center text-muted max-w-md leading-relaxed">
+            Drop in a rough thought, a draft, or a link. Moxie finds the angle and writes it in your voice. Jump anywhere with{" "}
+            <span className="kbd">⌘</span> <span className="kbd">K</span>
+          </p>
+          <div className="w-full max-w-[680px] mt-10">
+            <Composer autoFocus busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
+            <Starters />
+            {state.profiles.length === 0 && (
+              <p className="mt-6 text-center text-sm text-muted">
+                <Fingerprint size={14} className="inline -mt-0.5 mr-1" />
+                Drafts sound generic until it knows you.{" "}
+                <Link href="/voice" className="text-fg font-medium underline underline-offset-4 decoration-line-strong">
+                  Teach it your voice
+                </Link>
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -147,7 +178,8 @@ export default function WritePage() {
 
   return (
     <div className="min-h-full flex flex-col">
-      <div className="flex-1 w-full max-w-3xl mx-auto px-4 pt-6 pb-8 space-y-8">
+      <div className="sticky top-0 z-20 bg-bg/85 backdrop-blur-xl">{header}</div>
+      <div className="flex-1 w-full max-w-[760px] mx-auto px-4 pt-4 pb-10 space-y-10">
         {session.turns.map((t) =>
           t.role === "user" ? (
             <UserBubble key={t.id} turn={t} />
@@ -172,10 +204,9 @@ export default function WritePage() {
         )}
         <div ref={endRef} />
       </div>
-      <div className="sticky bottom-0 bg-gradient-to-t from-bg via-bg to-transparent pt-6 pb-4 px-4">
-        <div className="max-w-3xl mx-auto">
-          <Composer busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
-          <p className="text-center text-[11px] text-muted mt-2">Moxie can get things wrong. Check facts before you post.</p>
+      <div className="sticky bottom-0 z-10 px-4 pt-12 pb-[92px] bg-gradient-to-t from-bg from-80% to-transparent">
+        <div className="max-w-[680px] mx-auto">
+          <Composer compact busy={busy} onSend={(mode, text) => run({ mode }, text, undefined, true)} />
         </div>
       </div>
     </div>
@@ -201,7 +232,7 @@ function Starters() {
     },
   ];
   return (
-    <div className="flex flex-wrap justify-center gap-2 mt-4">
+    <div className="flex flex-wrap justify-center gap-2 mt-5">
       {items.map((i) => (
         <button
           key={i.label}
@@ -210,7 +241,7 @@ function Starters() {
             i.apply();
             focus();
           }}
-          className="inline-flex items-center gap-2 rounded-full border border-line px-3.5 py-2 text-sm text-muted hover:bg-panel-2 hover:text-fg"
+          className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3.5 py-2 text-sm text-muted hover:bg-panel-2 hover:text-fg hover:border-line-strong transition-colors"
         >
           {i.icon}
           {i.label}
@@ -224,7 +255,7 @@ function UserBubble({ turn }: { turn: UserTurn }) {
   if (turn.action) {
     return (
       <div className="flex justify-end">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-panel-2 px-3 py-1.5 text-sm text-muted">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel px-3 py-1.5 text-sm text-muted">
           <RefreshCw size={13} /> {turn.action}
         </span>
       </div>
@@ -232,11 +263,11 @@ function UserBubble({ turn }: { turn: UserTurn }) {
   }
   return (
     <div className="flex flex-col items-end gap-1.5">
-      <div className="max-w-[85%] rounded-3xl bg-panel-2 px-4 py-2.5 whitespace-pre-wrap text-[15px] leading-relaxed">
+      <div className="max-w-[85%] rounded-2xl border border-line bg-panel-2 px-4 py-3 whitespace-pre-wrap text-[15px] leading-relaxed">
         {turn.text || <span className="text-muted italic">Find something to say about the source</span>}
       </div>
       {turn.tags.length > 0 && (
-        <span className="text-xs text-muted inline-flex items-center gap-1">
+        <span className="text-xs text-faint inline-flex items-center gap-1">
           <AtSign size={12} /> {turn.tags.map((t) => `@${t}`).join(" ")}
         </span>
       )}
@@ -268,11 +299,16 @@ function AssistantBlock({
   onAnswer: (answer: string) => void;
 }) {
   const header = (
-    <div className="flex items-center gap-2 text-sm text-muted mb-3">
-      <span className="h-6 w-6 rounded-full bg-fg text-bg grid place-items-center">
-        <Sparkles size={13} />
+    <div className="flex items-center gap-3 mb-4">
+      <span className="inline-flex items-center gap-2 rounded-full bg-panel-3 pl-1.5 pr-3 py-1 text-xs font-semibold">
+        <span className="h-5 w-5 rounded-full bg-black grid place-items-center">
+          <Logo size={13} />
+        </span>
+        Moxie
       </span>
-      <span className="font-medium text-fg">{turn.status === "pending" ? (turn.kind === "critique" ? "Reading your draft" : "Writing in your voice") : turn.label}</span>
+      <span className={`text-sm ${turn.status === "pending" ? "text-muted animate-pulse" : "text-muted"}`}>
+        {turn.status === "pending" ? (turn.kind === "critique" ? "Reading your draft…" : "Writing in your voice…") : turn.label}
+      </span>
     </div>
   );
 
@@ -280,12 +316,12 @@ function AssistantBlock({
     return (
       <section aria-busy="true">
         {header}
-        <div className={turn.kind === "angles" ? "grid sm:grid-cols-2 gap-3" : "space-y-3"}>
-          {[0, 1, 2, 3].slice(0, turn.kind === "critique" ? 1 : turn.kind === "angles" ? 4 : 3).map((i) => (
-            <div key={i} className="rounded-2xl border border-line p-5 space-y-2.5 animate-pulse">
-              <div className="h-3 w-1/3 rounded bg-panel-2" />
+        <div className="rounded-2xl border border-line bg-panel divide-y divide-line overflow-hidden">
+          {[0, 1, 2].slice(0, turn.kind === "critique" ? 1 : 3).map((i) => (
+            <div key={i} className="p-5 space-y-2.5 animate-pulse">
+              <div className="h-3 w-1/4 rounded bg-panel-3" />
               <div className="h-3 w-full rounded bg-panel-2" />
-              <div className="h-3 w-4/5 rounded bg-panel-2" />
+              <div className="h-3 w-3/5 rounded bg-panel-2" />
             </div>
           ))}
         </div>
@@ -316,45 +352,55 @@ function AssistantBlock({
     );
   }
 
-  const chip = "inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-muted hover:bg-panel-2 hover:text-fg";
+  const chip =
+    "inline-flex items-center gap-1.5 rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-muted hover:bg-panel-2 hover:text-fg hover:border-line-strong transition-colors";
 
   return (
     <section>
       {header}
       {turn.question && <QuestionBanner question={turn.question} onAnswer={onAnswer} />}
-      {turn.formatNote && <p className="text-sm text-muted mb-3">{turn.formatNote}</p>}
+      {turn.formatNote && <p className="text-sm text-muted mb-4">{turn.formatNote}</p>}
 
       {turn.angles && (
         <>
-          <p className="text-sm text-muted mb-3">Pick an angle and I&apos;ll write drafts for it.</p>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {turn.angles.map((a, i) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => onAngle(a, i + 1)}
-                className="group text-left rounded-2xl border border-line bg-panel p-4 hover:border-fg/40 hover:shadow-md transition-all"
-                data-testid="angle"
-              >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="h-5 w-5 rounded-md bg-panel-2 text-xs font-semibold grid place-items-center">{i + 1}</span>
-                  <span className="text-[11px] uppercase tracking-wide text-muted">{a.type}</span>
-                </div>
-                <p className="font-semibold">{a.title}</p>
-                <p className="text-sm text-muted mt-1">{a.summary}</p>
-                <p className="text-sm mt-2.5 border-l-2 border-line pl-3 italic">{a.preview}</p>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent opacity-0 group-hover:opacity-100 transition-opacity">
-                  Write this angle →
-                </span>
-              </button>
-            ))}
+          <div className="rounded-2xl border border-line bg-panel overflow-hidden">
+            <div className="hidden sm:grid grid-cols-[2.5rem_9rem_1fr_5rem] gap-4 px-5 py-2.5 text-xs text-faint border-b border-line">
+              <span>#</span>
+              <span>Type</span>
+              <span>Angle</span>
+              <span />
+            </div>
+            <div className="divide-y divide-line">
+              {turn.angles.map((a, i) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => onAngle(a, i + 1)}
+                  className="group w-full grid grid-cols-[1.75rem_1fr_auto] sm:grid-cols-[2.5rem_9rem_1fr_5rem] gap-4 px-5 py-4 text-left hover:bg-panel-2 transition-colors"
+                  data-testid="angle"
+                >
+                  <span className="text-sm text-faint tabular-nums pt-px">{i + 1}</span>
+                  <span className="hidden sm:block text-xs uppercase tracking-wide text-muted pt-1">{a.type}</span>
+                  <span className="min-w-0">
+                    <span className="block font-medium">{a.title}</span>
+                    <span className="block text-sm text-muted mt-0.5">{a.summary}</span>
+                    <span className="block text-sm text-fg/80 mt-2 italic">“{a.preview}”</span>
+                  </span>
+                  <span className="flex items-start justify-end pt-0.5 text-xs text-muted group-hover:text-fg">
+                    <span className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 group-hover:border-line-strong group-hover:bg-panel-3">
+                      Write <ArrowUpRight size={13} />
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 mt-3">
             <button type="button" className={chip} onClick={() => onMode("angles", "More angles")}>
               <RefreshCw size={13} /> More angles
             </button>
             <button type="button" className={chip} onClick={() => onMode("variations", "Skip angles, write drafts")}>
-              {SEND_MODES.variations.icon} Just write drafts
+              <PenLine size={13} /> Just write drafts
             </button>
             <button type="button" className={chip} onClick={() => onMode("surprise", "Surprise me")}>
               <Shuffle size={13} /> Surprise me
@@ -400,7 +446,7 @@ function AssistantBlock({
 function QuestionBanner({ question, onAnswer }: { question: string; onAnswer: (a: string) => void }) {
   return (
     <form
-      className="rounded-2xl bg-accent-soft/60 p-4 mb-3 space-y-2"
+      className="rounded-2xl border border-line bg-panel p-4 mb-4 space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
         const input = (e.currentTarget.elements.namedItem("answer") as HTMLInputElement).value.trim();
@@ -408,11 +454,11 @@ function QuestionBanner({ question, onAnswer }: { question: string; onAnswer: (a
       }}
     >
       <p className="text-sm">
-        <span className="font-medium">To make this stronger:</span> {question}
+        <span className="text-accent font-medium">To make this stronger</span> <span className="text-muted">·</span> {question}
       </p>
       <div className="flex gap-2">
         <input name="answer" className="input" placeholder="Answer in your own words…" aria-label="Answer" />
-        <button className="btn btn-sm" type="submit">
+        <button className="btn" type="submit">
           Add to message
         </button>
       </div>

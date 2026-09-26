@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/Shell";
+
 import { useState } from "react";
 import { candidateText, useStore } from "@/lib/store";
 import type { FeedbackKind } from "@/lib/types";
@@ -16,14 +18,13 @@ export default function LibraryPage() {
   const [tab, setTab] = useState<"saved" | "posted" | "signals">("saved");
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto px-4 sm:px-8 py-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Library</h1>
-        <p className="text-sm text-muted">
+    <div className="pb-32">
+      <PageHeader title="Library" />
+      <div className="space-y-6 max-w-4xl mx-auto px-5 sm:px-10">
+      <p className="text-sm text-muted max-w-2xl -mt-1">
           Saved drafts, what you&apos;ve posted, and every signal the tool is learning from. Remove anything it shouldn&apos;t learn.
-        </p>
-      </header>
-      <div className="flex gap-1" role="tablist">
+      </p>
+      <div className="inline-flex items-center h-10 rounded-full border border-line bg-panel p-1 gap-1" role="tablist">
         {(
           [
             ["saved", `Saved (${state.saved.length})`],
@@ -36,7 +37,7 @@ export default function LibraryPage() {
             role="tab"
             aria-selected={tab === k}
             type="button"
-            className={`btn btn-sm ${tab === k ? "!border-accent !text-accent" : ""}`}
+            className={`h-8 px-3.5 rounded-full text-sm transition-colors ${tab === k ? "bg-panel-3 text-fg" : "text-muted hover:text-fg"}`}
             onClick={() => setTab(k)}
           >
             {label}
@@ -133,6 +134,7 @@ export default function LibraryPage() {
           </ul>
         </div>
       )}
+      </div>
     </div>
   );
 }

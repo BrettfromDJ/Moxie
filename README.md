@@ -16,15 +16,15 @@ To try the whole UI without an API key, run `MOXIE_MOCK=1 npm run dev`. Every mo
 
 ## What's in it
 
-**Write** (`/`): a ChatGPT-style workspace
-- A sidebar lists your past drafts (conversations), grouped by date. It also links to the Voice, Structures, De-AI, and Library tools. **New draft** starts fresh.
-- One big composer asks "What are you thinking about?". Enter sends and Shift+Enter adds a new line. Its toolbar keeps everything else one click away:
+**Write** (`/`): a dark, Fey-inspired workspace
+- A floating dock at the bottom switches between Write, Voice & taste, Structures, De-AI, Library, and recent drafts. **⌘K** (or the search button) opens a command menu. Use it to search past drafts, start a new one, change the post type, send mode, or voice, and jump to any page.
+- The page header shows the current settings as filter pills (for example **Post | Reply**, **Length | Tight ×**). Click a pill to change it, click × to reset it, or click **+** for every setting.
+- The composer works like a command bar: a panel for your message, then an action bar with **+** (sources), a summary of your settings, and the send button. Enter sends and Shift+Enter adds a new line. What's one click away:
   - **+**: add a link, pasted text, or an image as a source.
-  - **Post type**: original, quote, reply, announcement, link, image, or remix.
-  - **Settings**: a Midjourney-style panel of pill options for format, length, number of options, creativity, angle, reply relationship, goal, style, structure, and X Premium limits.
-  - **Voice**: pick which voice profile to write in.
-  - **Send mode** (next to the send button): **Find angles** (the default), **Write drafts**, **Surprise me**, **Explore formats**, or **Find the real thought** (a critique of your draft).
-- Results appear as a conversation. Angles show as a numbered grid; click one to get drafts. Button actions ("More like #2", "Push #1 further", "Fresh set", "5 different directions", "Try other formats") show up as small bubbles in the conversation. Follow-up messages keep the earlier context.
+  - **Post type** and **Voice** (header pills): original, quote, reply, announcement, link, image, or remix, and which voice profile to write in.
+  - **All settings** (the header's **+**): a Midjourney-style panel of pill options for format, length, number of options, creativity, angle, reply relationship, goal, style, structure, and X Premium limits.
+  - **Send mode** (the arrow next to the send button): **Find angles** (the default), **Write drafts**, **Surprise me**, **Explore formats**, or **Find the real thought** (a critique of your draft).
+- Results appear as a conversation. Angles show as a numbered table, like a stock screener; click one to get drafts. Button actions ("More like #2", "Push #1 further", "Fresh set", "5 different directions", "Try other formats") show up as small bubbles in the conversation. Follow-up messages keep the earlier context.
 - Each draft card shows the text, one line of facts (X character count, reading time, a voice-match estimate, and any problems), and an icon row: copy, edit, more like this, never like this, push further, and Fit to X. Less common actions sit in a "…" menu: ask for a change, shorten, De-AI, strengthen the hook or opening, improve pacing, save, and "I posted this".
 - Threads display as numbered posts. Hover a post to reorder, shorten, or delete it.
 - For quotes and replies, the composer asks for the source post, and your message becomes your (optional) take.

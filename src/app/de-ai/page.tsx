@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/Shell";
+
 import { useMemo, useState } from "react";
 import { findAIPatterns } from "@/lib/checks";
 import { activeProfile, api, useStore } from "@/lib/store";
@@ -34,14 +36,13 @@ export default function DeAIPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">De-AI this</h1>
-        <p className="text-sm text-muted">
+    <div className="pb-32">
+      <PageHeader title="De-AI checker" />
+      <div className="max-w-3xl mx-auto px-5 sm:px-10 space-y-6">
+      <p className="text-sm text-muted max-w-2xl -mt-1">
           Flags generic conclusions, filler, forced contrasts, clichés, and patterns you&apos;ve rejected before, then suggests
           cleaner alternatives.
-        </p>
-      </header>
+      </p>
       <textarea
         className="input text-[15px] leading-relaxed"
         rows={8}
@@ -97,6 +98,7 @@ export default function DeAIPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

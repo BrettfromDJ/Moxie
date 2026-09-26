@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Sidebar } from "@/components/Sidebar";
+import { Shell } from "@/components/Shell";
 import { StoreProvider } from "@/lib/store";
 import "./globals.css";
 
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="h-full">
         <StoreProvider>
-          <Sidebar>{children}</Sidebar>
+          <Shell>{children}</Shell>
         </StoreProvider>
       </body>
     </html>

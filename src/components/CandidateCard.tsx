@@ -55,7 +55,7 @@ function IconButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={`h-8 w-8 grid place-items-center rounded-lg text-muted hover:bg-panel-2 hover:text-fg disabled:opacity-40 ${active ? "text-fg" : ""}`}
+      className={`h-8 w-8 grid place-items-center rounded-lg text-muted hover:bg-panel-3 hover:text-fg disabled:opacity-40 ${active ? "text-fg" : ""}`}
     >
       {children}
     </button>
@@ -165,7 +165,7 @@ export function CandidateCard({
   return (
     <article className={`group rounded-2xl border border-line bg-panel p-4 sm:p-5 transition-opacity ${busy ? "opacity-60" : ""}`} data-testid="candidate">
       <header className="flex items-center gap-2 text-xs text-muted mb-2">
-        <span className="h-5 min-w-5 px-1 rounded-md bg-panel-2 text-fg font-semibold grid place-items-center">{index}</span>
+        <span className="h-5 min-w-5 px-1 rounded-md bg-panel-3 text-fg font-semibold grid place-items-center tabular-nums">{index}</span>
         <span className="font-medium text-fg">{c.angle}</span>
         <span className="truncate hidden sm:inline">· {c.structure}</span>
       </header>
@@ -181,7 +181,7 @@ export function CandidateCard({
             aria-label="Edit post"
           />
         ) : (
-          <p className="whitespace-pre-wrap text-[15.5px] leading-relaxed">{c.text}</p>
+          <p className="whitespace-pre-wrap text-[16px] leading-relaxed text-fg">{c.text}</p>
         ))}
 
       {isThread && (
@@ -255,25 +255,28 @@ export function CandidateCard({
       )}
 
       {/* One quiet line of facts; problems only appear when there are any. */}
-      <p className="mt-3 text-xs text-muted flex flex-wrap gap-x-3 gap-y-1">
-        {isThread ? <span>{c.thread.length} posts</span> : <span><Count text={c.text} limit={limit} /> chars</span>}
+      <div className="mt-4 pt-3 border-t border-line flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
+        {isThread ? <span>{c.thread.length} posts</span> : <span className="tabular-nums"><Count text={c.text} limit={limit} /> chars</span>}
         <span>{formatReadingTime(readingSeconds(full))}</span>
-        <span title="The model's own estimate, not a measured score">
-          Sounds like you: <span className={c.voiceMatch === "strong" ? "text-good" : c.voiceMatch === "partial" ? "text-warn" : "text-bad"}>{c.voiceMatch}</span> (est.)
+        <span
+          title="The model's own estimate, not a measured score"
+          className={`tag ${c.voiceMatch === "strong" ? "tag-good" : c.voiceMatch === "partial" ? "tag-warn" : "tag-bad"}`}
+        >
+          {c.voiceMatch === "strong" ? "Sounds like you" : c.voiceMatch === "partial" ? "Partly your voice" : "Not your voice"} · est.
         </span>
-        {over && <span className="text-bad">Over X&apos;s limit</span>}
+        {over && <span className="tag tag-bad">Over X&apos;s limit</span>}
         {problems.map((p) => (
-          <span key={p.label} className="text-warn" title={p.detail}>
+          <span key={p.label} className="tag tag-warn" title={p.detail}>
             {p.label}
             {p.detail ? `: ${p.detail}` : ""}
           </span>
         ))}
         {repeat && (
-          <span className="text-warn" title={repeat.text}>
-            Similar to something you posted
+          <span className="tag tag-warn" title={repeat.text}>
+            Similar to a past post
           </span>
         )}
-      </p>
+      </div>
       {error && <p className="text-xs text-bad mt-2">{error}</p>}
 
       {never ? (

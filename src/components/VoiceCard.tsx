@@ -49,8 +49,9 @@ export function VoiceCard({ profile }: { profile: VoiceProfile }) {
     canvas.height = H;
     const g = canvas.getContext("2d")!;
     const grad = g.createLinearGradient(0, 0, W, H);
-    grad.addColorStop(0, "#1e1b4b");
-    grad.addColorStop(1, "#4f46e5");
+    grad.addColorStop(0, "#1d1830");
+    grad.addColorStop(0.55, "#2c2140");
+    grad.addColorStop(1, "#5b3526");
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
     g.fillStyle = "rgba(255,255,255,0.65)";
@@ -80,7 +81,7 @@ export function VoiceCard({ profile }: { profile: VoiceProfile }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl p-6 text-white bg-gradient-to-br from-indigo-950 to-indigo-600 shadow-lg">
+      <div className="rounded-2xl p-6 text-white bg-gradient-to-br from-[#1d1830] via-[#2c2140] to-[#5b3526] border border-white/10 shadow-lg">
         <p className="text-xs tracking-widest text-white/60 font-semibold">VOICE DNA</p>
         <p className="text-2xl font-bold mt-1">{profile.archetype || profile.name}</p>
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">

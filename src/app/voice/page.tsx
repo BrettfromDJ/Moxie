@@ -1,5 +1,8 @@
 "use client";
 
+import { FileText, Fingerprint, Heart, Plus, Share2, Sparkles } from "lucide-react";
+import { PageHeader, SectionTitle } from "@/components/Shell";
+
 import { useEffect, useState } from "react";
 import { ListEditor } from "@/components/ListEditor";
 import { VoiceCard } from "@/components/VoiceCard";
@@ -64,41 +67,44 @@ export default function VoicePage() {
   if (!hydrated) return null;
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto px-4 sm:px-8 py-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Voice & taste</h1>
-        <p className="text-muted text-sm max-w-2xl">
-          <span className="font-medium text-fg">My voice</span> is learned from your own writing and decides how drafts sound.{" "}
-          <span className="font-medium text-fg">My taste</span> is what you admire in other people&apos;s posts; it shapes
-          hooks and structure without replacing your voice.
-        </p>
-      </header>
-
-      <section className="space-y-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="text-lg font-semibold">My voice</h2>
-          {state.profiles.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {state.profiles.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    update((s) => ({ ...s, activeProfileId: p.id }));
-                    setCreating(false);
-                  }}
-                  className={`btn btn-sm ${p.id === state.activeProfileId && !creating ? "!border-accent !text-accent" : ""}`}
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <button className="btn btn-sm btn-primary ml-auto" type="button" onClick={() => setCreating(true)}>
-            + New voice profile
+    <div className="pb-32">
+      <PageHeader
+        title="Voice & taste"
+        actions={
+          <button className="btn btn-primary" type="button" onClick={() => setCreating(true)}>
+            <Plus size={15} /> New voice profile
           </button>
-        </div>
+        }
+      >
+        {state.profiles.length > 0 && (
+          <div className="flex items-center h-10 rounded-full border border-line bg-panel p-1 gap-1">
+            {state.profiles.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  update((s) => ({ ...s, activeProfileId: p.id }));
+                  setCreating(false);
+                }}
+                className={`h-8 px-3.5 rounded-full text-sm transition-colors ${
+                  p.id === state.activeProfileId && !creating ? "bg-panel-3 text-fg" : "text-muted hover:text-fg"
+                }`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </PageHeader>
 
+      <div className="max-w-6xl mx-auto px-5 sm:px-10 space-y-12">
+      <p className="text-muted text-sm max-w-2xl -mt-1">
+        <span className="font-medium text-fg">My voice</span> is learned from your own writing and decides how drafts sound.{" "}
+        <span className="font-medium text-fg">My taste</span> is what you admire in other people&apos;s posts; it shapes
+        hooks and structure without replacing your voice.
+      </p>
+
+      <section className="space-y-5">
         {creating ? (
           <Onboarding
             onDone={(p) => {
@@ -115,6 +121,7 @@ export default function VoicePage() {
       </section>
 
       <TasteSection />
+      </div>
     </div>
   );
 }
@@ -203,7 +210,7 @@ function Onboarding({ onDone, onCancel }: { onDone: (p: VoiceProfile) => void; o
             aria-selected={tab === k}
             type="button"
             onClick={() => setTab(k)}
-            className={`btn btn-sm ${tab === k ? "!border-accent !text-accent" : ""}`}
+            className={`btn btn-sm ${tab === k ? "!bg-panel-3 !border-line-strong" : "!text-muted"}`}
           >
             {label}
           </button>
@@ -319,7 +326,7 @@ function ProfileEditor({ profile }: { profile: VoiceProfile }) {
       <div className="space-y-6">
         <div className="card p-5 space-y-4">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold">Voice DNA</h3>
+            <SectionTitle tone="orange" icon={<Fingerprint size={17} />}>Voice DNA</SectionTitle>
             <span className="text-xs text-muted">Everything here is editable. Correct anything it got wrong.</span>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
@@ -381,7 +388,7 @@ function ProfileEditor({ profile }: { profile: VoiceProfile }) {
 
         <div className="card p-5 space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold">Learn from my choices</h3>
+            <SectionTitle tone="purple" icon={<Sparkles size={17} />}>Learn from my choices</SectionTitle>
             <span className="text-xs text-muted">{feedbackCount} signals so far (likes, rejections, edits, posted)</span>
             <button className="btn btn-sm ml-auto" type="button" disabled={!!busy || feedbackCount < 3} onClick={learn}>
               {busy === "learn" ? "Reviewing…" : "Suggest profile updates"}
@@ -402,7 +409,7 @@ function ProfileEditor({ profile }: { profile: VoiceProfile }) {
 
         <div className="card p-5 space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold">Writing samples ({profile.samples.length})</h3>
+            <SectionTitle tone="green" icon={<FileText size={17} />}>Writing samples ({profile.samples.length})</SectionTitle>
             <button className="btn btn-sm ml-auto" type="button" disabled={!!busy || profile.samples.length < 3} onClick={reanalyze}>
               {busy === "reanalyze" ? "Analyzing…" : "Re-analyze from samples"}
             </button>
@@ -466,8 +473,8 @@ function ProfileEditor({ profile }: { profile: VoiceProfile }) {
         </button>
       </div>
 
-      <aside className="space-y-3 lg:sticky lg:top-20">
-        <h3 className="font-semibold">Share your Voice DNA</h3>
+      <aside className="space-y-3 lg:sticky lg:top-6">
+        <SectionTitle tone="pink" icon={<Share2 size={17} />}>Share your Voice DNA</SectionTitle>
         <VoiceCard profile={profile} />
       </aside>
     </div>
@@ -611,8 +618,8 @@ function TasteSection() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">My taste</h2>
+      <div className="space-y-2">
+        <SectionTitle tone="blue" icon={<Heart size={17} />}>My taste</SectionTitle>
         <p className="text-sm text-muted max-w-2xl">
           Posts by other people that you think are good, and what you admire about them. Drafts borrow the quality (a sharp hook,
           a useful structure), never the words or the voice.
