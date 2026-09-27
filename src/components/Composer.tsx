@@ -29,13 +29,13 @@ import { RefChip, useReferenceActions } from "./References";
 import { SettingsPanel, settingsSummary, useSettings } from "./SettingsPanel";
 import { TagTextarea, unknownTags } from "./TagTextarea";
 
-export const SEND_MODES: Record<SendMode, { title: string; hint: string; icon: React.ReactNode }> = {
+export const SEND_MODES: Record<SendMode, { title: string; short?: string; hint: string; icon: React.ReactNode }> = {
   angles: { title: "Find angles", hint: "Suggests distinct angles first; pick one to get drafts", icon: <Sparkles size={16} /> },
   variations: { title: "Write drafts", hint: "Skip angles and go straight to finished drafts", icon: <PenLine size={16} /> },
   surprise: { title: "Surprise me", hint: "Less obvious takes you probably haven't considered", icon: <Shuffle size={16} /> },
   formats: { title: "Explore formats", hint: "Same idea as a one-liner, short post, long post, and thread", icon: <Layers size={16} /> },
-  critique: { title: "Find the real thought", hint: "Diagnose what's weak before polishing, and get one useful question", icon: <Stethoscope size={16} /> },
-  check: { title: "Check for AI writing", hint: "Paste any post to flag what sounds generated and get a cleaner version", icon: <WandSparkles size={16} /> },
+  critique: { title: "Find the real thought", short: "Real thought", hint: "Diagnose what's weak before polishing, and get one useful question", icon: <Stethoscope size={16} /> },
+  check: { title: "Check for AI writing", short: "AI check", hint: "Paste any post to flag what sounds generated and get a cleaner version", icon: <WandSparkles size={16} /> },
 };
 
 const pillBase = "items-center gap-1.5 rounded-full px-2.5 sm:px-3 h-9 text-sm text-muted whitespace-nowrap hover:bg-panel-3 hover:text-fg transition-colors";
@@ -192,8 +192,15 @@ export function Composer({
             trigger={() => (
               <span className={pill}>
                 <SlidersHorizontal size={15} />
-                <span className="hidden sm:inline">{summary.length ? summary.slice(0, 2).join(" · ") : "Settings"}</span>
-                {summary.length > 2 && <span className="text-xs">+{summary.length - 2}</span>}
+                <span className="hidden sm:inline">Settings</span>
+                {summary.length > 0 && (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"
+                    data-testid="settings-summary"
+                    title={`Changed: ${summary.join(", ")}`}
+                  />
+                )}
+                <ChevronDown size={13} className="text-faint" />
               </span>
             )}
           >
@@ -205,15 +212,13 @@ export function Composer({
             label="Voice"
             panelClassName="w-72 p-1.5"
             trigger={() => (
-              <span className={`hidden sm:inline-flex ${pillBase}`}>
+              <span
+                className={`hidden sm:inline-flex ${pillBase}`}
+                title={activeInspirations.length ? `Inspired by ${activeInspirations.map((i) => (i.handle ? `@${i.handle}` : i.name)).join(", ")}` : undefined}
+              >
                 <Fingerprint size={15} />
-                {profile?.name ?? "No voice"}
-                {activeInspirations.length > 0 && (
-                  <span className="text-faint">
-                    {" "}
-                    + {activeInspirations.length === 1 ? (activeInspirations[0].handle ? `@${activeInspirations[0].handle}` : activeInspirations[0].name) : `${activeInspirations.length} writers`}
-                  </span>
-                )}
+                <span className="max-w-[7rem] truncate">{profile?.name ?? "No voice"}</span>
+                {activeInspirations.length > 0 && <span className="text-faint">+{activeInspirations.length}</span>}
               </span>
             )}
           >
@@ -285,7 +290,7 @@ export function Composer({
               trigger={() => (
                 <span className={pill} data-testid="send-mode">
                   {SEND_MODES[mode].icon}
-                  <span className="hidden sm:inline">{SEND_MODES[mode].title}</span>
+                  <span className="hidden sm:inline">{SEND_MODES[mode].short ?? SEND_MODES[mode].title}</span>
                   <ChevronDown size={14} />
                 </span>
               )}

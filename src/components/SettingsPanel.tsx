@@ -52,9 +52,24 @@ function Pills<T extends string | number>({
 
 export function SettingsPanel() {
   const { settings: s, set } = useSettings();
+  // Keeps the post type and the chosen model; everything else goes back to defaults.
+  const keys = ["format", "length", "angle", "customAngle", "creativity", "options", "goal", "relationship", "mode"] as const;
+  const isDefault = keys.every((k) => s[k] === DEFAULT_SETTINGS[k]);
+  const reset = () => set({ ...DEFAULT_SETTINGS, postType: s.postType, provider: s.provider, charLimit: s.charLimit });
 
   return (
     <div className="space-y-4 max-h-[min(34rem,45vh)] overflow-y-auto p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">Settings</span>
+        <button
+          type="button"
+          className="text-xs text-muted hover:text-fg disabled:opacity-40 disabled:hover:text-muted"
+          disabled={isDefault}
+          onClick={reset}
+        >
+          Reset to defaults
+        </button>
+      </div>
       <Pills label="Format" value={s.format} options={FORMATS} onChange={(format) => set({ format })} />
       <div className="grid grid-cols-2 gap-4">
         <Pills label="Length" value={s.length} options={LENGTHS} onChange={(length) => set({ length })} />
@@ -109,13 +124,6 @@ export function SettingsPanel() {
         />
         I have X Premium (long posts up to {X_PREMIUM_LIMIT.toLocaleString()} characters)
       </label>
-      <button
-        type="button"
-        className="text-xs text-muted hover:text-fg"
-        onClick={() => set({ ...DEFAULT_SETTINGS, postType: s.postType })}
-      >
-        Reset to defaults
-      </button>
     </div>
   );
 }

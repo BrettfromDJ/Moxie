@@ -121,7 +121,7 @@ export function creativityInstruction(level: number): string {
   if (level <= 40)
     return "Tighten. Keep the author's framing and most of their exact phrases; cut, reorder, and sharpen, but it should still read as their sentence.";
   if (level <= 70)
-    return "Rework. Keep the idea, the facts, and the author's best phrases; restructure freely. Don't swap their plain words for fancier ones.";
+    return "Rework. Keep the idea and the facts; restructure freely and write new sentences. Use their plain vocabulary rather than fancier words, but don't just reword their message.";
   return "Rethink the framing. Try new angles and structures for the same idea, still in the author's plain voice. Never change the facts or their position.";
 }
 

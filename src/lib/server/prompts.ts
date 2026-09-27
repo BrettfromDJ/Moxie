@@ -30,7 +30,7 @@ The standard is a real person posting, not "content". Real posts are specific, a
 
 Voice
 - The author's real posts (<voice_examples>) outrank everything else, including the profile description and general writing advice. Match their sentence length, capitalization, punctuation, vocabulary, line breaks, and how they open and end. If they write in lowercase, so do you. If they ramble a bit, you can too.
-- Reuse the author's own phrasing from their message wherever it works. Their words are almost always better than a polished paraphrase.
+- Use the author's vocabulary and plain words, not fancier ones. But their message is the brief, not the post: it tells you what they think. Don't hand it back to them reworded, and never open a draft by restating or paraphrasing their message or the source post. Start from what backs the point up: the specific detail, the example, what it looks like in practice, what follows from it. (Exception: when the creativity setting says to clean up or tighten, their message is the draft; keep it.)
 - Without examples, write like a smart person texting a friend who knows the field: plain words, concrete nouns, no performance.
 - Inspirations (<inspirations>) are writers the author admires. Learn how they write and apply it at the strength given for each: "light" means the author's voice with a few of the inspiration's techniques; "blend" means the author's ideas and vocabulary shaped by the inspiration's rhythm, openings, and moves; "strong" means write it the way the inspiration would, while the ideas, facts, opinions, and experiences stay the author's. At every strength, never reuse an inspiration's sentences, catchphrases, topics, or anecdotes, and never make a post read as an imitation of a specific person.
 
@@ -51,7 +51,7 @@ What gives writing away as generated (never do these; they are why people call d
 - Anything on the author's avoid list or that they rejected before.
 
 Options
-- When asked for several candidates, each must take a genuinely different approach (angle, what it leads with, how much it says), not a reword of one sentence. At least one should be the plainest, most direct version of what the author said.
+- When asked for several candidates, each must take a genuinely different approach (angle, what it leads with, how much it says), not a reword of one sentence. Every candidate must open differently: no two may share a first sentence, opening words, or opening shape, and none may open with a paraphrase of the author's message. At least one should be plain and direct.
 - Structures are loose mechanics, not templates. Apply the idea, not a formula, and never borrow wording from an example.
 
 Respect X. Single posts must fit the character limit unless the format is long-form; every post in a thread must fit it. Never claim or predict that a post will perform well.
@@ -260,7 +260,7 @@ function authorBlock(ctx: GenerationContext): string {
   if (needsTake) {
     parts.push(
       ctx.take.trim()
-        ? `<author_take note="The author's own angle or rough draft for responding. Develop it; if it reads like a finished draft, improve the wording while preserving the underlying point.">\n${esc(ctx.take.trim())}\n</author_take>`
+        ? `<author_take note="The author's reaction to the target. It is the point to make, not the sentence to post: don't restate or paraphrase it as the opener. Show why it's true instead (the specific part of the target that proves it, what it looks like in practice, a consequence). Only if it already reads like a finished post, tighten it lightly.">\n${esc(ctx.take.trim())}\n</author_take>`
         : `<author_take>(blank: find something genuinely interesting to say about the target)</author_take>`,
     );
   }
@@ -313,7 +313,7 @@ function generateTask(req: GenerateRequest): string {
     case "directions":
       return `Explore ${n} completely different directions. Every candidate must differ from the others in angle AND structure AND framing. Cosmetic rewrites of one idea do not count.`;
     case "formats":
-      return `Show this same idea in four formats: one-liner, short, long, and thread (one candidate each, in that order). Keep the idea and angle constant so the author can compare formats. In formatNote, recommend which format fits this idea best and briefly say why.`;
+      return `Show this same idea in four formats: one-liner, short, long, and thread (one candidate each, in that order). Keep the idea and angle constant so the author can compare formats, but don't open every format with the same sentence. In formatNote, recommend which format fits this idea best and briefly say why.`;
     case "more-like":
       return `The author liked this candidate:\n<liked_candidate>\n${esc(candidateText(req.seed!))}\n</liked_candidate>\nWrite ${n} close siblings: keep the angle, structure, and what makes it work, and vary the wording, hook, and details.`;
     case "push":
